@@ -614,6 +614,7 @@ impl WeighingMode {
 pub enum DispersionMode {
     MAD,
     Variance,
+    SSE,
     SME,
     SSME,
     Entropy,
@@ -624,6 +625,7 @@ impl DispersionMode {
     pub fn read(input: &str) -> DispersionMode {
         match input {
             "var" | "variance" => DispersionMode::Variance,
+            "sse" => DispersionMode::SSE,
             "mad"  => DispersionMode::MAD,
             "mix" | "mixed" => DispersionMode::Mixed,
             "ssme" => DispersionMode::SSME,

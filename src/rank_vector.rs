@@ -9,7 +9,8 @@ use std::fmt::Debug;
 use std::clone::Clone;
 use std::borrow::{Borrow,BorrowMut};
 use ndarray::Array1;
-use crate::utils::{slow_sme,slow_ssme,slow_mad,slow_median};
+use crate::utils::{slow_sme,slow_ssme,slow_mad,slow_median,argsort,ArgSort,ArgSortII};
+use crate::io::DispersionMode;
 
 #[derive(Clone,Serialize,Deserialize)]
 pub struct RankVector<T> {
@@ -53,11 +54,19 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
     }
 
     pub fn link(in_vec: Vec<f64>) -> RankVector<Vec<Node>> {
+        let argsorted:Vec<(usize,f64)> = in_vec.argsort();
+        RankVector::<Vec<Node>>::link_sorted(argsorted)
 
-        let mut vector: Vec<Node> = vec![Node::blank();in_vec.len()+2];
+    }
+
+    pub fn link_sorted(argsorted: Vec<(usize,f64)>) -> RankVector<Vec<Node>> {
+        // This method accepts argsorted vectors of f64s only. It does not check integrity!
+        // Use at own risk.
+
+        let mut vector: Vec<Node> = vec![Node::blank();argsorted.len()+2];
 
         let left = vector.len() - 2;
-        let right = vector.len() -1;
+        let right = vector.len() - 1;
 
         vector[left] = Node {
             data:0.,
@@ -80,36 +89,24 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
         let mut zones = [0;4];
         let mut sums = [0.;2];
 
-        let mut sorted_invec = in_vec.into_iter().enumerate().collect::<Vec<(usize,f64)>>();
-
-        sorted_invec.sort_unstable_by(|a,b| a.1.partial_cmp(&b.1).unwrap_or(Ordering::Greater));
-
-        let mut rank_order = Vec::with_capacity(sorted_invec.len());
-
         let mut previous = left;
-
         let tail_node_index = right;
+        let mut rank_order = Vec::with_capacity(argsorted.len());
 
-        for (ranking,(index,data)) in sorted_invec.into_iter().enumerate() {
+        for (ranking,(index,data)) in argsorted.into_iter().enumerate() {
 
-            let node = Node {
-                data: data,
-                index: index,
-                previous: vector[previous].index,
-                next: tail_node_index,
-                zone: 2,
-                rank: ranking,
-            };
+            let node = &mut vector[index];
 
-            // println!("{:?}", vector);
+            node.data = data;
+            node.index = index;
+            node.previous = previous;
+            node.next = tail_node_index;
+            node.zone = 2;
+            node.rank = ranking;
 
             vector[previous].next = index;
-
             previous = index;
-
             rank_order.push(index);
-
-            vector[index] = node;
 
             zones[2] += 1;
             sums[1] += data;
@@ -627,6 +624,16 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
     }
 
     #[inline]
+    pub fn sse(&self) -> f64 {
+        let values = self.ordered_values();
+        let len = self.len() as f64;
+        let sum:f64 = values.iter().sum();
+        let mean = sum/len;
+        let deviation_sum:f64 = values.iter().map(|x| (x - mean).powi(2)).sum();
+        deviation_sum
+    }
+
+    #[inline]
     pub fn ssme(&self) -> f64 {
         let values = self.ordered_values();
         let median = self.median();
@@ -640,6 +647,19 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
         let median = self.median();
         let sum:f64 = values.into_iter().map(|x| (x - median).abs()).sum();
         sum
+    }
+
+    pub fn dispersion(&self,mode: DispersionMode) -> f64 {
+        match mode {
+            DispersionMode::Variance => self.var(),
+            DispersionMode::SSE => self.sse(),
+            DispersionMode::MAD => self.mad(),
+            DispersionMode::SSME => self.ssme(),
+            DispersionMode::SME => self.sme(),
+            DispersionMode::Entropy => self.entropy(),
+            DispersionMode::Mixed => panic!("Mixed mode not a valid dispersion for individual trees!"),
+        }
+
     }
 
     #[inline]
@@ -751,6 +771,31 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
 
     }
 
+
+    pub fn ordered_sse(&mut self,draw_order: &[usize]) -> Vec<f64> {
+
+        let mut sse = Vec::with_capacity(draw_order.len());
+
+        let mut running_mean = 0.;
+        let mut running_square_sum = 0.;
+
+        for (i,draw) in draw_order.iter().rev().enumerate() {
+            if self.nodes[*draw].zone !=0 {
+                let target = self.nodes[*draw].data;
+                let new_running_mean = running_mean + ((target - running_mean) / (i as f64 + 1.));
+                let new_running_square_sum = running_square_sum + (target - running_mean)*(target - new_running_mean);
+                running_mean = new_running_mean;
+                running_square_sum = new_running_square_sum;
+
+                sse.push(running_square_sum - (running_mean * i as f64));
+            }
+            else {continue}
+        };
+
+        sse.into_iter().rev().collect()
+
+    }
+
     pub fn ordered_ssme(&mut self,draw_order: &[usize]) -> Vec<f64> {
 
 
@@ -798,28 +843,6 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
 
         smes
 
-        //
-        // for dropped_sample in drop_set {
-        //     self.pop(*dropped_sample);
-        // }
-        //
-        // let mut smes = Vec::with_capacity(draw_order.len());
-        //
-        // let ordered_values = self.ordered_values();
-        // let mut total_values = ordered_values.len() as f64;
-        // let mut running_sum = ordered_values.iter().sum::<f64>();
-        // let mut running_median = self.median();
-        //
-        // for (i,draw) in draw_order.iter().enumerate() {
-        //     let new_sme = running_sum - (total_values * running_median);
-        //     smes.push(new_sme);
-        //     let (new_median,value) = self.mpop(*draw);
-        //     running_median = new_median;
-        //     running_sum -= value;
-        //     total_values -= 1.;
-        // };
-        //
-        // smes
 
     }
 
@@ -837,11 +860,7 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
 
 
 
-    pub fn ordered_covs(&mut self,draw_order: &[usize],drop_set: &HashSet<usize>) -> Vec<f64> {
-
-        for dropped_sample in drop_set {
-            self.pop(*dropped_sample);
-        }
+    pub fn ordered_covs(&mut self,draw_order: &[usize]) -> Vec<f64> {
 
         let mut covs = Vec::with_capacity(draw_order.len());
 
@@ -861,6 +880,18 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
         }
 
         covs
+    }
+
+    pub fn ordered_dispersion(&mut self,draw_order: &[usize],mode:DispersionMode) -> Vec<f64> {
+        match mode {
+            DispersionMode::Variance => self.ordered_variance(&draw_order),
+            DispersionMode::SSE => self.ordered_sse(&draw_order),
+            DispersionMode::MAD => self.ordered_mads(&draw_order),
+            DispersionMode::SSME => self.ordered_ssme(&draw_order),
+            DispersionMode::SME => self.ordered_sme(&draw_order),
+            DispersionMode::Entropy => self.ordered_entropy(&draw_order),
+            DispersionMode::Mixed => panic!("Mixed mode not a valid split setting for individual trees!"),
+        }
     }
 
     #[inline]
@@ -1126,7 +1157,7 @@ impl RankVector<SmallVec<[Node;1024]>> {
 
         let container = SmallVec::new();
 
-        let empty = RankVector::<Vec<Node>>::link(&vec![]);
+        let empty = RankVector::<Vec<Node>>::link(vec![]);
 
         let mut output = empty.clone_to_container(container);
 
@@ -1358,7 +1389,6 @@ mod rank_vector_tests {
             vm.pop(*draw);
         }
         assert_eq!(ordered_ssme,slow_ordered_ssme);
-
     }
 
     #[test]

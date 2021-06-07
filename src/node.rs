@@ -8,14 +8,14 @@ use std::mem::replace;
 use std::collections::{HashMap,HashSet};
 use serde_json;
 
-use ndarray::Array2;
+use ndarray::prelude::*;
 
 extern crate rand;
 use rand::Rng;
 
 use rayon::prelude::*;
 
-use crate::rank_table::RankTable;
+use crate::rank_table::RankMatrix;
 use crate::Feature;
 use crate::Sample;
 use crate::io::Parameters;
@@ -33,23 +33,24 @@ use std::path::Path;
 use std::ffi::OsStr;
 use std::env;
 
+use crate::fast_nipal_vector::project;
+
 use rayon::prelude::*;
 
 // Prefer braid thickness to to be odd to make consensus braids work well
 // const BRAID_THICKNESS: usize = 3;
 
 #[derive(Clone,Serialize,Deserialize,Debug)]
-pub struct Node {
+pub struct PrototypeNode {
 
     pub prototype: bool,
 
-    input_table: RankTable,
-    output_table: RankTable,
+    input_table: RankMatrix,
+    output_table: RankMatrix,
 
     input_features: Vec<Feature>,
     output_features: Vec<Feature>,
     samples: Vec<Sample>,
-
 
     filter: Option<Filter>,
 
@@ -57,7 +58,6 @@ pub struct Node {
     pub id: String,
     pub depth: usize,
     pub children: Vec<Node>,
-
 
     pub medians: Vec<f64>,
     pub feature_weights: Option<Vec<f64>>,
@@ -81,8 +81,8 @@ impl Node {
         feature_weights: Option<Vec<f64>>
     ) -> Node {
 
-        let input_table = RankTable::from_array(input_counts,parameters);
-        let output_table = RankTable::from_array(output_counts,parameters);
+        let input_table = RankMatrix::from_array(input_counts,parameters);
+        let output_table = RankMatrix::from_array(output_counts,parameters);
         let medians = output_table.medians();
         let additive = vec![0.;medians.len()];
         let dispersions = output_table.dispersions();
@@ -109,15 +109,61 @@ impl Node {
             medians: medians,
             feature_weights: feature_weights,
             dispersions: dispersions,
-            // additive: additive,
-            // local_gains: Some(local_gains),
-            // absolute_gains: None
+
         };
 
         new_node
 
     }
 
+
+    fn bootstrap(&self,available_samples:Option<Vec<Sample>>,parameters:&Parameters) -> Node {
+
+        let input_feature_indices: Vec<usize>;
+        let output_feature_indices: Vec<usize>;
+
+        if parameters.unsupervised {
+            let input_feature_len = self.input_features.len();
+            let mut all_indices = (0..input_feature_len).collect::<Vec<usize>>();
+            let (ii,oi) = all_indices.partial_shuffle(&mut thread_rng(),input_feature_len/2);
+            // Why can't you destructure into an initialized variable? It is a mystery.
+            input_feature_indices = ii.to_vec();
+            output_feature_indices = oi.to_vec();
+        }
+        else {
+            input_feature_indices = (0..self.input_features.len()).collect();
+            output_feature_indices = (0..self.output_features.len()).collect();
+        }
+
+        let mut rng = thread_rng();
+        let input_index_bootstrap: Vec<usize> = (0..self.parameters.input_feature_subsample).map(|_| rng.gen_range(0..input_feature_indices.len())).collect();
+        let output_index_bootstrap: Vec<usize> = (0..self.parameters.output_feature_subsample).map(|_| rng.gen_range(0..output_feature_indices.len())).collect();
+
+        let input_feature_bootstrap: Vec<Feature> = input_index_bootstrap.iter().map(|&i| self.input_features[i].clone()).collect();
+        let output_feature_bootstrap: Vec< Feature> = output_index_bootstrap.iter().map(|&i| self.output_features[i].clone()).collect();
+
+        let samples = available_samples.unwrap_or(self.samples.clone());
+        let sample_bootstrap: Vec<Sample> = (0..self.parameters.sample_subsample).map(|i| samples[i].clone()).collect();
+        let sample_index_bootstrap: Vec<usize> = sample_bootstrap.iter().map(|s| s.index).collect();
+
+        let mut input_array_bootstrap = self.input_array.select(Axis(0),&sample_index_bootstrap).select(Axis(1),&input_index_bootstrap);
+        let mut output_array_bootstrap = self.output_array.select(Axis(0),&sample_index_bootstrap).select(Axis(1),&output_index_bootstrap);
+
+        println!("{:?}",input_array_bootstrap);
+        println!("{:?}",output_array_bootstrap);
+
+
+        Node::prototype(
+            &input_array_bootstrap,
+            &output_array_bootstrap,
+            &input_feature_bootstrap,
+            &output_feature_bootstrap,
+            &sample_bootstrap,
+            &self.parameters,
+            None
+        )
+
+    }
     // Used for testing
 
     pub fn blank_node() -> Node {
@@ -193,18 +239,30 @@ impl Node {
             medians: medians,
             feature_weights: feature_weights,
             dispersions: dispersions,
-            // additive: additive,
-            // local_gains: local_gains,
-            // absolute_gains: None
+
         };
 
         child
     }
-
-    // pub fn local_split(&self) -> (usize,usize) {
     //
-    //     for f_i in (0..self.input_table.dim.0) {
-    //         let draw_order = self.input_table.draw_order()
+    // pub fn local_split(&self,parameters:&Parameters) -> (usize,usize) {
+    //
+    //     let draw_orders: Vec<Vec<usize>>;
+    //
+    //     if parameters.reduce_input {
+    //         let input_projection = project(self.input_table.to_array(),parameters.reduction);
+    //         draw_orders = input_projection.loadings
+    //             .axis_iter(Axis(0))
+    //             .map(|l| argsort(&l.to_vec()))
+    //             .map(|v| )
+    //             .collect();
+    //     }
+    //     else {
+    //         draw_orders = (0..self.input_table.dimensions.0).map(|i| self.input_table.sort_by_feature(i)).collect();
+    //     }
+    //
+    //     for f_i in (0..self.input_table.dimensions.0) {
+    //         let draw_order = self.input_table.sort_by_feature(f_i);
     //     }
     //
     //     (0,0)
@@ -278,11 +336,11 @@ impl Node {
         self.children = children;
     }
 
-    pub fn output_rank_table(&self) -> &RankTable {
+    pub fn output_rank_table(&self) -> &RankMatrix {
         &self.output_table
     }
 
-    pub fn input_rank_table(&self) -> &RankTable {
+    pub fn input_rank_table(&self) -> &RankMatrix {
         &self.input_table
     }
 
@@ -331,34 +389,6 @@ impl Node {
     }
 
 
-    // pub fn absolute_gains(&self) -> &Option<Vec<f64>> {
-    //     &self.absolute_gains
-    // }
-    //
-    // pub fn local_gains(&self) -> Option<&Vec<f64>> {
-    //     self.local_gains.as_ref()
-    // }
-    //
-    // pub fn compute_absolute_gains(&mut self,root_dispersions: &Vec<f64>) {
-    //
-    //     let mut absolute_gains = Vec::with_capacity(root_dispersions.len());
-    //
-    //     for (nd,od) in self.dispersions.iter().zip(root_dispersions.iter()) {
-    //         absolute_gains.push(od-nd)
-    //     }
-    //     self.absolute_gains = Some(absolute_gains);
-    //
-    //     for child in self.children.iter_mut().rev() {
-    //         child.compute_absolute_gains(root_dispersions);
-    //     }
-    // }
-    //
-    // pub fn root_absolute_gains(&mut self) {
-    //     for child in self.children.iter_mut().rev() {
-    //         child.compute_absolute_gains(&self.dispersions);
-    //     }
-    // }
-
 
     pub fn covs(&self) -> Vec<f64> {
         self.dispersions.iter().zip(self.mads().iter()).map(|(d,m)| d/m).map(|x| if x.is_normal() {x} else {0.}).collect()
@@ -385,33 +415,7 @@ impl Node {
         };
         output
     }
-    //
-    //
-    // pub fn sample_encoding(&self,max_sample_option:Option<usize>) -> Vec<bool> {
-    //
-    //     let max_sample =
-    //         if self.prototype {self.samples.iter().map(|s| s.index).max().unwrap_or(0)}
-    //         else {max_sample_option.unwrap_or(0)};
-    //
-    //     let mut sample_encoding = vec![false; max_sample+1];
-    //     for sample in self.samples() {
-    //         sample_encoding[sample.index] = true;
-    //     }
-    //     return sample_encoding
-    // }
 
-    // pub fn feature_encoding(&self,max_feature_option:Option<usize>) -> Vec<bool> {
-    //
-    //     let max_feature =
-    //         if self.prototype {self.output_features().iter().map(|f| f.index).max().unwrap_or(0)}
-    //         else {max_feature_option.unwrap_or(0)};
-    //
-    //     let mut feature_encoding = vec![false; max_feature+1];
-    //     for feature in self.output_features() {
-    //         feature_encoding[feature.index] = true;
-    //     }
-    //     return feature_encoding
-    // }
 }
 
 impl Node {
@@ -440,7 +444,7 @@ mod node_testing {
     }
 
     fn blank_counts() -> (Array2<f64>,Array2<f64>) {
-        (arr_from_vec2(vec![]),arr_from_vec2(vec![]))
+        (arr_from_vec2(vec![vec![]]),arr_from_vec2(vec![vec![]]))
     }
 
     fn blank_node() -> Node {

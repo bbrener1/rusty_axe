@@ -93,36 +93,35 @@ impl Forest {
         let input_index_bootstrap: Vec<usize> = (0..self.parameters.input_feature_subsample).map(|_| rng.gen_range(0..input_feature_indices.len())).collect();
         let output_index_bootstrap: Vec<usize> = (0..self.parameters.output_feature_subsample).map(|_| rng.gen_range(0..output_feature_indices.len())).collect();
 
-        let input_feature_bootstrap: Vec<Feature> = input_index_bootstrap.into_iter().map(|i| self.input_features[i].clone()).collect();
-        let output_feature_bootstrap: Vec< Feature> = output_index_bootstrap.into_iter().map(|i| self.output_features[i].clone()).collect();
+        let input_feature_bootstrap: Vec<Feature> = input_index_bootstrap.iter().map(|&i| self.input_features[i].clone()).collect();
+        let output_feature_bootstrap: Vec< Feature> = output_index_bootstrap.iter().map(|&i| self.output_features[i].clone()).collect();
 
         let samples = available_samples.unwrap_or(self.samples.clone());
         let sample_bootstrap: Vec<Sample> = (0..self.parameters.sample_subsample).map(|i| samples[i].clone()).collect();
         let sample_index_bootstrap: Vec<usize> = sample_bootstrap.iter().map(|s| s.index).collect();
 
-        let input_array_bootstrap = self.input_array.select(Axis(0),&sample_index_bootstrap).select(Axis(1),&input_index_bootstrap);
-        let output_array_bootstrap = self.output_array.select(Axis(0),&sample_index_bootstrap).select(Axis(1),&output_index_bootstrap);
+        let mut input_array_bootstrap = self.input_array.select(Axis(0),&sample_index_bootstrap).select(Axis(1),&input_index_bootstrap);
+        let mut output_array_bootstrap = self.output_array.select(Axis(0),&sample_index_bootstrap).select(Axis(1),&output_index_bootstrap);
 
         println!("{:?}",input_array_bootstrap);
         println!("{:?}",output_array_bootstrap);
 
-        if self.parameters.reduce_input {
-            let input_projection = project(input_array_bootstrap,self.parameters.reduction);
-            input_array_bootstrap = input_projection.loadings;
-        }
 
-        if self.parameters.reduce_output {
-            let output_projection = project(output_array_bootstrap,self.parameters.reduction);
-            output_array_bootstrap = output_projection.loadings;
-        }
-
-        Node::prototype(input_array_bootstrap,output_array_bootstrap,)
+        Node::prototype(
+            &input_array_bootstrap,
+            &output_array_bootstrap,
+            &input_feature_bootstrap,
+            &output_feature_bootstrap,
+            &sample_bootstrap,
+            &self.parameters,
+            None
+        )
 
     }
 
     pub fn generate(&mut self) -> Result<(),Error> {
 
-        let roots: Vec<Node> = (0..self.size).map(|tree|
+        let roots: Vec<Node> = (0..self.parameters.tree_limit).map(|tree|
             {
                 self.bootstrap(None)
             }
@@ -227,25 +226,26 @@ mod random_forest_tests {
 
     #[test]
     fn test_forest_initialization_simple() {
-        let counts = vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]];
+        let counts = arr_from_vec2(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]]);
         Forest::initialize_from(counts.clone(),counts.clone(),Parameters::empty(), "./testing/test_trees");
     }
 
     #[test]
     fn test_forest_initialization_iris() {
-        let iris = read_matrix("./testing/iris.tsv");
+        let iris_vec = read_matrix("./testing/iris.tsv");
+        let iris = arr_from_vec2(iris_vec);
         // let features = read_header("../testing/iris.features");
         Forest::initialize_from(iris.clone(),iris.clone(),Parameters::empty(),"./testing/err");
     }
 
     #[test]
     fn test_forest_bootstrap() {
-        let iris = read_matrix("./testing/iris.tsv");
+        let iris_vec = read_matrix("./testing/iris.tsv");
+        let iris = arr_from_vec2(iris_vec);
         // let features = read_header("../testing/iris.features");
         let mut forest = Forest::initialize_from(iris.clone(),iris.clone(),Parameters::empty(),"./testing/err");
 
         forest.bootstrap(None);
-        panic!();
     }
 
 

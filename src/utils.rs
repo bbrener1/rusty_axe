@@ -97,91 +97,18 @@ fn row_echelon(mtx: &Vec<Vec<f64>>) {
 }
 
 
-pub fn l1_sum(mtx_in:&Vec<Vec<f64>>, weights: &[f64]) -> Vec<f64> {
-    let weight_sum = weights.iter().sum::<f64>();
-
-    let sample_sums = mtx_in.iter().map(|sample| {
-        sample.iter().enumerate().map(|(i,feature)| feature * weights[i] ).sum::<f64>() / weight_sum
-    }).map(|sum| if sum.is_normal() || sum == 0. {sum} else {f64::INFINITY}).collect();
-    sample_sums
+pub fn l1_sum(mtx_in:&Array2<f64>, weights: &Array1<f64>) -> Array1<f64> {
+    let weight_sum = weights.sum();
+    let sample_sums = mtx_in.dot(weights);
+    sample_sums / weight_sum
 }
 
-pub fn l2_sum(mtx_in:&Vec<Vec<f64>>, weights: &[f64]) -> Vec<f64> {
-    let weight_sum = weights.iter().sum::<f64>();
-
-    let sample_sums = mtx_in.iter().map(|sample| {
-        sample.iter().enumerate().map(|(i,feature)| feature.powi(2) * weights[i] ).sum::<f64>() / weight_sum
-    }).map(|sum| if sum.is_normal() || sum == 0. {sum} else {f64::INFINITY}).collect();
-    sample_sums
+pub fn l2_sum(mtx_in:&Array2<f64>, weights: &Array1<f64>) -> Array1<f64> {
+    let weight_sum = weights.sum();
+    let sample_sums = mtx_in.mapv(|x| x.powi(2)).dot(weights);
+    sample_sums / weight_sum
 }
 
-pub fn argmin(in_vec: &[f64]) -> Option<(usize,f64)> {
-    let mut minimum = None;
-    for (j,&val) in in_vec.iter().enumerate() {
-        let check = if let Some((i,m)) = minimum.take() {
-            match val.partial_cmp(&m).unwrap_or(Ordering::Greater) {
-                Ordering::Less => {Some((j,val))},
-                Ordering::Equal => {Some((i,m))},
-                Ordering::Greater => {Some((i,m))},
-            }
-        }
-        else {
-            if !val.is_nan() {
-                Some((j,val))
-            }
-            else {
-                None
-            }
-        };
-        minimum = check;
-
-    };
-    minimum
-}
-
-pub fn argmax(in_vec: &[f64]) -> Option<(usize,f64)> {
-    let mut maximum = None;
-    for (j,&val) in in_vec.iter().enumerate() {
-        let check = if let Some((i,m)) = maximum.take() {
-            match val.partial_cmp(&m).unwrap_or(Ordering::Less) {
-                Ordering::Less => {Some((i,m))},
-                Ordering::Equal => {Some((i,m))},
-                Ordering::Greater => {Some((j,val))},
-            }
-        }
-        else {
-            if !val.is_nan() {
-                Some((j,val))
-            }
-            else {
-                None
-            }
-        };
-        maximum = check;
-
-    };
-    maximum
-}
-
-pub fn gn_argmax<T:Iterator<Item=U>,U:PartialOrd + PartialEq>(input: T) -> Option<usize> {
-    let mut maximum: Option<(usize,U)> = None;
-    for (j,val) in input.enumerate() {
-        let check = if let Some((i,m)) = maximum.take() {
-            match val.partial_cmp(&m).unwrap_or(Ordering::Less) {
-                Ordering::Less => {Some((i,m))},
-                Ordering::Equal => {Some((i,m))},
-                Ordering::Greater => {Some((j,val))},
-            }
-        }
-        else {
-            if val.partial_cmp(&val).is_some() { Some((j,val)) }
-            else { None }
-        };
-        maximum = check;
-
-    };
-    maximum.map(|(i,m)| i)
-}
 
 pub fn jaccard(a:&[bool],b:&[bool]) -> f64 {
     assert!(a.len() == b.len());
@@ -191,13 +118,10 @@ pub fn jaccard(a:&[bool],b:&[bool]) -> f64 {
     return 1. - (i/u)
 }
 
-pub fn argsort(input: &Vec<f64>) -> Vec<(usize,f64)> {
-    let mut intermediate1 = input.iter().enumerate().collect::<Vec<(usize,&f64)>>();
-    intermediate1.sort_unstable_by(|a,b| a.1.partial_cmp(b.1).unwrap_or(Ordering::Greater));
-    let mut intermediate2 = intermediate1.iter().enumerate().collect::<Vec<(usize,&(usize,&f64))>>();
-    intermediate2.sort_unstable_by(|a,b| ((a.1).0).cmp(&(b.1).0));
-    let out = intermediate2.iter().map(|x| (x.0,((x.1).1).clone())).collect();
-    out
+pub fn argsort<I: Iterator<Item=T>,T: PartialOrd + Clone>(s:I) -> Vec<(usize,T)>{
+    let mut paired: Vec<(usize,T)> = s.map(|t| t.clone()).enumerate().collect();
+    paired.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+    paired
 }
 
 pub fn slow_median(values: Vec<f64>) -> f64 {
@@ -274,6 +198,150 @@ pub fn matrix_flip<T:Clone>(in_mat: &Vec<Vec<T>>) -> Vec<Vec<T>> {
 pub fn mtx_dim<T>(in_mat: &Vec<Vec<T>>) -> (usize,usize) {
     (in_mat.len(),in_mat.get(0).unwrap_or(&vec![]).len())
 }
+
+
+pub fn argmax<T:Iterator<Item=U>,U:PartialOrd + PartialEq>(input: T) -> Option<usize> {
+    let mut maximum: Option<(usize,U)> = None;
+    for (j,val) in input.enumerate() {
+        let check =
+            if let Some((i,m)) = maximum.take() {
+                match val.partial_cmp(&m).unwrap_or(Ordering::Less) {
+                    Ordering::Less => {Some((i,m))},
+                    Ordering::Equal => {Some((i,m))},
+                    Ordering::Greater => {Some((j,val))},
+                }
+            }
+            else {
+                if val.partial_cmp(&val).is_some() { Some((j,val)) }
+                else { None }
+            };
+        maximum = check;
+
+    };
+    maximum.map(|(i,_)| i)
+}
+
+
+pub fn argmax_v<T:Iterator<Item=U>,U:PartialOrd + PartialEq>(input: T) -> Option<(usize,U)> {
+    let mut maximum: Option<(usize,U)> = None;
+    for (j,val) in input.enumerate() {
+        let check =
+            if let Some((i,m)) = maximum.take() {
+                match val.partial_cmp(&m).unwrap_or(Ordering::Less) {
+                    Ordering::Less => {Some((i,m))},
+                    Ordering::Equal => {Some((i,m))},
+                    Ordering::Greater => {Some((j,val))},
+                }
+            }
+            else {
+                if val.partial_cmp(&val).is_some() { Some((j,val)) }
+                else { None }
+            };
+        maximum = check;
+
+    };
+    maximum
+}
+
+
+pub fn argmin<T:Iterator<Item=U>,U:PartialOrd + PartialEq>(input: T) -> Option<usize> {
+    let mut minimum: Option<(usize,U)> = None;
+    for (j,val) in input.enumerate() {
+        let check =
+            if let Some((i,m)) = minimum.take() {
+                match val.partial_cmp(&m).unwrap_or(Ordering::Less) {
+                    Ordering::Greater => {Some((i,m))},
+                    Ordering::Equal => {Some((i,m))},
+                    Ordering::Less => {Some((j,val))},
+                }
+            }
+            else {
+                if val.partial_cmp(&val).is_some() { Some((j,val)) }
+                else { None }
+            };
+        minimum = check;
+
+    };
+    minimum.map(|(i,_)| i)
+}
+
+
+pub fn argmin_v<T:Iterator<Item=U>,U:PartialOrd + PartialEq>(input: T) -> Option<(usize,U)> {
+    let mut minimum: Option<(usize,U)> = None;
+    for (j,val) in input.enumerate() {
+        let check =
+            if let Some((i,m)) = minimum.take() {
+                match val.partial_cmp(&m).unwrap_or(Ordering::Less) {
+                    Ordering::Greater => {Some((i,m))},
+                    Ordering::Equal => {Some((i,m))},
+                    Ordering::Less => {Some((j,val))},
+                }
+            }
+            else {
+                if val.partial_cmp(&val).is_some() { Some((j,val)) }
+                else { None }
+            };
+        minimum = check;
+
+    };
+    minimum
+}
+
+pub trait ArgMinMax<I:PartialOrd+PartialEq> : Iterator<Item=I> + Sized {
+
+    fn argmax(self) -> Option<usize> {
+        argmax(self)
+    }
+
+    fn argmax_v(self) -> Option<(usize,I)> {
+        argmax_v(self)
+    }
+
+    fn argmin(self) -> Option<usize> {
+        argmin(self)
+    }
+
+    fn argmin_v(self) -> Option<(usize,I)> {
+        argmin_v(self)
+    }
+}
+
+
+pub trait ArgMinMaxII<I:PartialOrd+PartialEq> : IntoIterator<Item=I> + Sized {
+
+    fn argmax(self) -> Option<usize> {
+        argmax(self.into_iter())
+    }
+
+    fn argmax_v(self) -> Option<(usize,I)> {
+        argmax_v(self.into_iter())
+    }
+
+    fn argmin(self) -> Option<usize> {
+        argmin(self.into_iter())
+    }
+
+    fn argmin_v(self) -> Option<(usize,I)> {
+        argmin_v(self.into_iter())
+    }
+}
+
+impl<I:Iterator<Item=IT>,IT:PartialOrd+PartialEq> ArgMinMax<IT> for I {}
+impl<I:IntoIterator<Item=IT>,IT:PartialOrd+PartialEq> ArgMinMaxII<IT> for I {}
+
+pub trait ArgSort<I:PartialOrd+PartialEq+Clone> : Iterator<Item=I> + Sized {
+    fn argsort(self) -> Vec<(usize,I)> {
+        argsort(self)
+    }
+}
+pub trait ArgSortII<I:PartialOrd+PartialEq+Clone> : IntoIterator<Item=I> + Sized {
+    fn argsort(self) -> Vec<(usize,I)> {
+        argsort(self.into_iter())
+    }
+}
+
+impl<I:Iterator<Item=IT>,IT:PartialOrd+PartialEq+Clone> ArgSort<IT> for I {}
+impl<I:IntoIterator<Item=IT>,IT:PartialOrd+PartialEq+Clone> ArgSortII<IT> for I {}
 
 
 pub fn iris_array() -> Array2<f64> {
