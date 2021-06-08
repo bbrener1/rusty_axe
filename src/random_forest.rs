@@ -91,26 +91,21 @@ impl Forest {
 
     pub fn generate(&mut self) -> Result<(),Error> {
 
-        let roots: Vec<Node> = (0..self.parameters.tree_limit).map(|tree|
-            {
-                Node::prototype(
-                    &self.input_features,
-                    &self.output_features,
-                    &self.samples,
-                    &self.parameters,
-                )
-            }
-        ).collect();
+        for i in (0..self.parameters.tree_limit) {
 
+            println!("Computing tree {}",i);
 
-        self.roots = roots;
+            let mut root = Node::prototype(
+                        &self.input_features,
+                        &self.output_features,
+                        &self.samples,
+                        &self.parameters,
+                    );
 
-        for root in self.roots.iter_mut() {
             root.grow(&self.prototype,&self.parameters);
-        }
 
-        for (i,root) in self.roots.iter().enumerate() {
             let specific_address = format!("{}.tree_{}.compact",self.parameters.report_address,i);
+
             root.to_serial().dump(specific_address)?;
         }
 

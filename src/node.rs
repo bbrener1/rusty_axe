@@ -169,7 +169,7 @@ impl Node {
             let feature_indices: Vec<usize> = self.input_features.iter().map(|f| f.index).collect();
             let sample_indices: Vec<usize> = self.samples.iter().map(|s| s.index).collect();
             let input_array = prototype.input_array.select(Axis(0),&sample_indices).select(Axis(1),&feature_indices);
-            project(input_array,parameters.reduction).unwrap()
+            project(input_array,parameters.reduction).expect("Projection failed")
         })
     }
 
@@ -178,7 +178,7 @@ impl Node {
             let feature_indices: Vec<usize> = self.output_features.iter().map(|f| f.index).collect();
             let sample_indices: Vec<usize> = self.samples.iter().map(|s| s.index).collect();
             let output_array = prototype.output_array.select(Axis(0),&sample_indices).select(Axis(1),&feature_indices);
-            project(output_array,parameters.reduction).unwrap()
+            project(output_array,parameters.reduction).expect("Projection failed")
         })
     }
 
@@ -212,8 +212,8 @@ impl Node {
         let output_ranks = self.output_rank_matrix(prototype, parameters);
 
         let (local_feature,local_sample,local_threshold) = RankMatrix::split_input_output(input_ranks,output_ranks,parameters)?;
-
-        println!("Local Split: {},{},{}",local_feature,local_sample,local_threshold);
+        //
+        // println!("Local Split: {},{},{}",local_feature,local_sample,local_threshold);
 
         let (left_filter,right_filter) = if parameters.reduce_input {
             let input_features = self.input_features.clone();
@@ -235,7 +235,10 @@ impl Node {
 
     pub fn split(&mut self, prototype:&Prototype,parameters:&Parameters) -> Option<&mut [Node]> {
 
-        if self.depth > parameters.depth_cutoff {println!("Depth exceeded"); return None};
+        if self.depth > parameters.depth_cutoff {
+            // println!("Depth exceeded");
+            return None
+        };
 
         if !self.prototype {panic!("Attempted to split on a non-prototype node")};
 
@@ -248,8 +251,8 @@ impl Node {
         let right_samples: Vec<Sample> = right_filter.filter_matrix(&local_inputs).into_iter().map(|i| self.samples[i].clone()).collect();
 
         if (left_samples.len() < parameters.leaf_size_cutoff) || (right_samples.len() < parameters.leaf_size_cutoff) {
-            println!("LL:{},{}",left_samples.len(),right_samples.len());
-            println!("leaf size cutoff");
+            // println!("LL:{},{}",left_samples.len(),right_samples.len());
+            // println!("leaf size cutoff");
             return None
         };
 
@@ -267,7 +270,7 @@ impl Node {
         if let Some(children) = self.split(prototype,parameters) {
             for child in children.iter_mut() {
                 child.grow(prototype,parameters);
-                println!("D:{:?}",child.depth);
+                // println!("D:{:?}",child.depth);
             }
         }
     }

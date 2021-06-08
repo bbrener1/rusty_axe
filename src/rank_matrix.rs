@@ -24,7 +24,7 @@ use rayon::prelude::*;
 #[derive(Debug,Clone,Serialize,Deserialize)]
 // #[derive(Debug,Clone)]
 pub struct RankMatrix {
-    meta_vector: Vec<RankVector<Vec<Node>>>,
+    pub meta_vector: Vec<RankVector<Vec<Node>>>,
     pub dimensions: (usize,usize),
     // Features x Samples, not the usual Samples x Features
     dispersion_mode: DispersionMode,
@@ -189,10 +189,12 @@ impl RankMatrix {
     pub fn order_dispersions(&self,draw_order:&[usize],feature_weights:&Array1<f64>) -> Option<Array1<f64>> {
         let full_dispersion = self.full_dispersion(draw_order);
 
-        match self.norm_mode {
+        let normed = match self.norm_mode {
             NormMode::L1 => { Some(l1_sum(full_dispersion.as_ref()?,feature_weights))},
             NormMode::L2 => { Some(l2_sum(full_dispersion.as_ref()?,feature_weights))},
-        }
+        };
+
+        normed
     }
 
     pub fn full_dispersion(&self,draw_order:&[usize]) -> Option<Array2<f64>> {
@@ -224,21 +226,14 @@ impl RankMatrix {
                 reverse_dispersions[(reverse_draw_order.len() - j,i)] = rr;
             }
         }
-
         // assert_eq!(draw_order.len(),7);
         // assert_eq!(forward_dispersions.len(),8);
         // assert_eq!(reverse_dispersions.len(),8);
 
         let len = forward_dispersions.dim().0;
 
-        println!("Forward dispersions:{:?}",forward_dispersions);
-        println!("Reverse dispersions:{:?}",reverse_dispersions);
-
         let reverse_regularization = (Array1::<f64>::range(0.,len as f64 ,1.) / len as f64).mapv(|x| x.powf(self.split_fraction_regularization));
         let forward_regularization = (Array1::<f64>::range(len as f64 ,0.,-1.) / len as f64).mapv(|x| x.powf(self.split_fraction_regularization));
-
-        println!("Forward regularization:{:?}",forward_regularization);
-        println!("Reverse regularization:{:?}",reverse_regularization);
 
         for mut feature in forward_dispersions.axis_iter_mut(Axis(1)) {
             feature *= &forward_regularization;
@@ -247,16 +242,9 @@ impl RankMatrix {
         for mut feature in reverse_dispersions.axis_iter_mut(Axis(1)) {
             feature *= &reverse_regularization;
         }
-
         let mut dispersions = Array2::<f64>::zeros(((draw_order.len()+1,self.dimensions.0)));
 
-        println!("Forward dispersions:{:?}",forward_dispersions);
-        println!("Reverse dispersions:{:?}",reverse_dispersions);
-
-
         let dispersions = forward_dispersions + reverse_dispersions;
-
-        // println!("Dispesions:{:?}",dispersions);
 
         Some(dispersions)
 
@@ -281,16 +269,16 @@ impl RankMatrix {
                 .enumerate()
                 .map(|(i,draw_order)| {
                     let ordered_dispersions = output_matrix.order_dispersions(&draw_order,&feature_weights)?;
-                    let (local_index,dispersion) = ordered_dispersions.argmin_v()?;
+                    let (local_index,dispersion) = ArgMinMax::argmin_v(ordered_dispersions.iter().skip(1))?;
                     Some((i,draw_order[local_index],*dispersion))
                 })
                 .collect();
 
-        println!("Minima:{:?}",minima);
+        // println!("Minima:{:?}",minima);
 
         let (feature,sample,_) = minima.iter().flat_map(|m| m).min_by(|&a,&b| (a.2).partial_cmp(&b.2).unwrap())?;
 
-        let threshold = output_matrix.feature_fetch(*feature,*sample);
+        let threshold = input_matrix.feature_fetch(*feature,*sample);
 
         Some((*feature,*sample,threshold))
     }
