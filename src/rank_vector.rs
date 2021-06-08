@@ -14,7 +14,7 @@ use crate::io::DispersionMode;
 
 #[derive(Clone,Serialize,Deserialize)]
 pub struct RankVector<T> {
-    rank_order: Option<Vec<usize>>,
+    pub rank_order: Option<Vec<usize>>,
     zones: [usize;4],
     sums: [f64;2],
     offset: usize,
@@ -1005,8 +1005,8 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
 
 impl RankVector<Vec<Node>> {
 
-    pub fn derive(&self, indecies:&[usize]) -> RankVector<Vec<Node>> {
-        let stencil = Stencil::from_slice(indecies);
+    pub fn derive(&self, indices:&[usize]) -> RankVector<Vec<Node>> {
+        let stencil = Stencil::from_slice(indices);
         self.derive_stencil(&stencil)
     }
 
@@ -1029,9 +1029,11 @@ impl RankVector<Vec<Node>> {
                                                             })
                                                         .collect();
 
+        println!("{:?},{:?}",filtered_rank_order,rank_range);
+
         let mut new_rank_order = vec![0;stencil.len()];
 
-        for (new_index,old_index) in stencil.indecies.iter().enumerate() {
+        for (new_index,old_index) in stencil.indices.iter().enumerate() {
             new_rank_order[rank_range[old_index]] = new_index;
             rank_range.entry(*old_index).and_modify(|x| *x += 1);
         }
@@ -1064,7 +1066,7 @@ impl RankVector<Vec<Node>> {
 
         for (rank,&new_index) in new_rank_order.iter().enumerate() {
 
-            let old_index = stencil.indecies[new_index];
+            let old_index = stencil.indices[new_index];
 
             let data = self.nodes[old_index].data;
 
@@ -1210,9 +1212,10 @@ impl<'a,T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + Index
     }
 }
 
+#[derive(Clone,Debug)]
 pub struct Stencil<'a> {
     frequency: HashMap<usize,usize>,
-    indecies: &'a[usize]
+    indices: &'a[usize]
 }
 
 impl<'a> Stencil<'a> {
@@ -1225,12 +1228,12 @@ impl<'a> Stencil<'a> {
         }
         Stencil {
             frequency: frequency,
-            indecies: slice,
+            indices: slice,
         }
     }
 
     pub fn len(&self) -> usize {
-        self.indecies.len()
+        self.indices.len()
     }
 
     pub fn unique_len(&self) -> usize {
@@ -1392,7 +1395,7 @@ mod rank_vector_tests {
     }
 
     #[test]
-    fn derive_test() {
+    fn rank_vector_derive_test() {
         let mut vector = RankVector::<Vec<Node>>::link(vec![10.,-3.,0.,5.,-2.,-1.,15.,20.],);
         let kid1 = vector.derive(&vec![0,3,6,7]);
         let kid2 = vector.derive(&vec![1,4,5]);
@@ -1403,6 +1406,22 @@ mod rank_vector_tests {
         assert_eq!(kid1.var(),31.25);
         assert_eq!(kid1.rank_order,Some(vec![1,0,2,3]));
     }
+
+    #[test]
+    fn rank_vector_derive_double() {
+        let mut vector = RankVector::<Vec<Node>>::link(vec![10.,-3.,0.,5.,-2.,-1.,15.,20.],);
+        let kid1 = vector.derive(&vec![0,0,3,3,6,7]);
+        let kid2 = vector.derive(&vec![1,4,5]);
+        eprintln!("{:?}",kid1);
+        assert_eq!(kid1.median(),10.);
+        assert_eq!(kid2.median(),-2.);
+        assert_eq!(kid1.ssme(),175.);
+        assert!((kid1.var() - 28.472222222).abs() < 0.0001);
+        assert_eq!(kid1.rank_order,Some(vec![2,3,0,1,4,5]));
+    }
+// 10,10,5,5,15,20
+// 5,5,10,10,15,20
+
     //
     // #[bench]
     // fn bench_rv3_ordered_values_vector(b: &mut Bencher) {
