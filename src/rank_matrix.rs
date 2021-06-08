@@ -61,10 +61,6 @@ impl RankMatrix {
             split_fraction_regularization: parameters.split_fraction_regularization as f64,
         };
 
-        println!("Double-checking rank orders");
-        for v in rm.meta_vector.iter() {
-            println!("{:?}",v.rank_order);
-        }
 
         rm
 
@@ -170,13 +166,9 @@ impl RankMatrix {
 
     pub fn derive_specified(&self, features:&[usize],samples:&[usize]) -> RankMatrix {
 
-        println!("Deriving RM");
-
         let mut new_meta_vector: Vec<Arc<RankVector<Vec<Node>>>> = Vec::with_capacity(features.len());
 
         let sample_stencil = Stencil::from_slice(samples);
-
-        println!("Made stencil:{:?}",sample_stencil);
 
         let mut new_meta_vector: Vec<RankVector<Vec<Node>>> = features.iter().map(|i| self.meta_vector[*i].derive_stencil(&sample_stencil)).collect();
 
@@ -239,8 +231,14 @@ impl RankMatrix {
 
         let len = forward_dispersions.dim().0;
 
-        let forward_regularization = (Array1::<f64>::range(0.,len as f64 ,1.) / len as f64).mapv(|x| x.powf(self.split_fraction_regularization));
-        let reverse_regularization = (Array1::<f64>::range(len as f64 ,0.,-1.) / len as f64).mapv(|x| x.powf(self.split_fraction_regularization));
+        println!("Forward dispersions:{:?}",forward_dispersions);
+        println!("Reverse dispersions:{:?}",reverse_dispersions);
+
+        let reverse_regularization = (Array1::<f64>::range(0.,len as f64 ,1.) / len as f64).mapv(|x| x.powf(self.split_fraction_regularization));
+        let forward_regularization = (Array1::<f64>::range(len as f64 ,0.,-1.) / len as f64).mapv(|x| x.powf(self.split_fraction_regularization));
+
+        println!("Forward regularization:{:?}",forward_regularization);
+        println!("Reverse regularization:{:?}",reverse_regularization);
 
         for mut feature in forward_dispersions.axis_iter_mut(Axis(1)) {
             feature *= &forward_regularization;
@@ -252,7 +250,13 @@ impl RankMatrix {
 
         let mut dispersions = Array2::<f64>::zeros(((draw_order.len()+1,self.dimensions.0)));
 
+        println!("Forward dispersions:{:?}",forward_dispersions);
+        println!("Reverse dispersions:{:?}",reverse_dispersions);
+
+
         let dispersions = forward_dispersions + reverse_dispersions;
+
+        // println!("Dispesions:{:?}",dispersions);
 
         Some(dispersions)
 
@@ -282,7 +286,7 @@ impl RankMatrix {
                 })
                 .collect();
 
-        eprintln!("{:?}",minima);
+        println!("Minima:{:?}",minima);
 
         let (feature,sample,_) = minima.iter().flat_map(|m| m).min_by(|&a,&b| (a.2).partial_cmp(&b.2).unwrap())?;
 
@@ -341,11 +345,24 @@ mod rank_matrix_tests {
     }
 
     #[test]
-    pub fn rank_matrix_test_ordered() {
+    pub fn rank_matrix_test_ordered_ssme() {
         let mut parameters = blank_parameter();
         parameters.dispersion_mode = DispersionMode::SSME;
         parameters.norm_mode = NormMode::L1;
         parameters.split_fraction_regularization = 0.;
+        let mut mtx = RankMatrix::new(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]],&parameters);
+        let draw_order = mtx.sort_by_feature(0);
+
+        let order_dispersions = mtx.order_dispersions(&draw_order,&array![1.,]);
+        assert_eq!(order_dispersions,Some(array![594.0, 460.0, 354.0, 252.0, 130.0, 92.0, 162.0, 364.0, 594.0]));
+    }
+
+    #[test]
+    pub fn rank_matrix_test_ordered_mad() {
+        let mut parameters = blank_parameter();
+        parameters.dispersion_mode = DispersionMode::MAD;
+        parameters.norm_mode = NormMode::L1;
+        parameters.split_fraction_regularization = 1.;
         let mut mtx = RankMatrix::new(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]],&parameters);
         let draw_order = mtx.sort_by_feature(0);
 

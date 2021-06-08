@@ -47,8 +47,8 @@ pub struct Prototype {
 impl Prototype {
     fn from(input:Array2<f64>,output:Array2<f64>,parameters: &Parameters) -> Prototype {
         Prototype {
-            input_ranks:RankMatrix::from_array(&input,parameters),
-            output_ranks: RankMatrix::from_array(&output,parameters),
+            input_ranks:RankMatrix::from_array(&input.t().to_owned(),parameters),
+            output_ranks: RankMatrix::from_array(&output.t().to_owned(),parameters),
             input_array: input,
             output_array: output,
         }
@@ -110,7 +110,7 @@ impl Forest {
         }
 
         for (i,root) in self.roots.iter().enumerate() {
-            let specific_address = format!("{}.tree_{}.zip",self.parameters.report_address,i);
+            let specific_address = format!("{}.tree_{}.compact",self.parameters.report_address,i);
             root.to_serial().dump(specific_address)?;
         }
 

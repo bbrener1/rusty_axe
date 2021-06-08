@@ -36,6 +36,7 @@ use std::env;
 
 extern crate zip;
 use zip::ZipWriter;
+use zip::write::FileOptions;
 
 use crate::fast_nipal_vector::{project,Projection};
 
@@ -143,7 +144,6 @@ impl Node {
 
     fn derive_bootstrap(&self,parameters:&Parameters) -> Node {
         let (input_bootstrap,output_bootstrap,sample_bootstrap) = self.bootstrap(parameters);
-        println!("Bootstrapped:{:?},{:?},{:?}",input_bootstrap,output_bootstrap,sample_bootstrap);
         let node = Node {
 
             prototype: false,
@@ -160,7 +160,6 @@ impl Node {
             output_projection: None,
 
         };
-        println!("Slim node derived");
         node
     }
 
@@ -209,14 +208,12 @@ impl Node {
 
     pub fn local_split(&mut self,prototype:&Prototype,parameters:&Parameters) -> Option<(Filter,Filter)> {
 
-        println!("Local split start");
-
         let input_ranks = self.input_rank_matrix(prototype, parameters);
         let output_ranks = self.output_rank_matrix(prototype, parameters);
 
-        println!("Derived I/O rank matrices");
-
         let (local_feature,local_sample,local_threshold) = RankMatrix::split_input_output(input_ranks,output_ranks,parameters)?;
+
+        println!("Local Split: {},{},{}",local_feature,local_sample,local_threshold);
 
         let (left_filter,right_filter) = if parameters.reduce_input {
             let input_features = self.input_features.clone();
@@ -238,23 +235,21 @@ impl Node {
 
     pub fn split(&mut self, prototype:&Prototype,parameters:&Parameters) -> Option<&mut [Node]> {
 
-        if self.depth > parameters.depth_cutoff {return None};
+        if self.depth > parameters.depth_cutoff {println!("Depth exceeded"); return None};
 
         if !self.prototype {panic!("Attempted to split on a non-prototype node")};
 
-        println!("Splitting");
-
         let mut slim_node = self.derive_bootstrap(parameters);
         let (left_filter,right_filter) = slim_node.local_split(prototype, parameters)?;
-
-        println!("Found split");
 
         let sample_indices: Vec<usize> = self.samples.iter().map(|s| s.index).collect();
         let local_inputs = prototype.input_array.select(Axis(0),&sample_indices);
         let left_samples: Vec<Sample> = left_filter.filter_matrix(&local_inputs).into_iter().map(|i| self.samples[i].clone()).collect();
         let right_samples: Vec<Sample> = right_filter.filter_matrix(&local_inputs).into_iter().map(|i| self.samples[i].clone()).collect();
 
-        if left_samples.len() < parameters.leaf_size_cutoff || right_samples.len() < parameters.leaf_size_cutoff {
+        if (left_samples.len() < parameters.leaf_size_cutoff) || (right_samples.len() < parameters.leaf_size_cutoff) {
+            println!("LL:{},{}",left_samples.len(),right_samples.len());
+            println!("leaf size cutoff");
             return None
         };
 
@@ -272,6 +267,7 @@ impl Node {
         if let Some(children) = self.split(prototype,parameters) {
             for child in children.iter_mut() {
                 child.grow(prototype,parameters);
+                println!("D:{:?}",child.depth);
             }
         }
     }
@@ -337,7 +333,7 @@ impl Node {
     pub fn to_serial(&self) -> SerialNode {
         let serialized_children = self.children.iter().map(|c| c.to_serial()).collect();
         SerialNode {
-            samples: self.samples.clone(),
+            samples: self.samples.iter().map(|s| s.index).collect(),
             filter: self.filter.clone(),
             depth: self.depth,
             children: serialized_children,
@@ -348,7 +344,7 @@ impl Node {
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
 pub struct SerialNode {
-    samples: Vec<Sample>,
+    samples: Vec<usize>,
     filter: Option<Filter>,
     depth: usize,
     children: Vec<SerialNode>,
@@ -360,13 +356,23 @@ impl SerialNode {
     pub fn dump(self, address: String) -> Result<(),std::io::Error> {
         use std::fs::OpenOptions;
         use std::io::Write;
-        let mut handle = OpenOptions::new().write(true).truncate(true).create(true).open(address)?;
-        let mut zip = ZipWriter::new(handle);
+        let mut handle = OpenOptions::new().write(true).truncate(true).create(true).open(address.clone())?;
         let string = self.to_string()?;
-        zip.write(string.as_bytes())?;
-        zip.finish()?;
+        handle.write(string.as_bytes())?;
         Ok(())
     }
+
+    // pub fn dump(self, address: String) -> Result<(),std::io::Error> {
+    //     use std::fs::OpenOptions;
+    //     use std::io::Write;
+    //     let mut handle = OpenOptions::new().write(true).truncate(true).create(true).open(address.clone())?;
+    //     let mut zip = ZipWriter::new(handle);
+    //     zip.start_file(address,FileOptions::default());
+    //     let string = self.to_string()?;
+    //     zip.write(string.as_bytes())?;
+    //     zip.finish()?;
+    //     Ok(())
+    // }
 
     pub fn to_string(self) -> Result<String,serde_json::Error> {
         serde_json::to_string(&self)

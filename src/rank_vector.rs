@@ -1029,8 +1029,6 @@ impl RankVector<Vec<Node>> {
                                                             })
                                                         .collect();
 
-        println!("{:?},{:?}",filtered_rank_order,rank_range);
-
         let mut new_rank_order = vec![0;stencil.len()];
 
         for (new_index,old_index) in stencil.indices.iter().enumerate() {
