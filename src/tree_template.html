@@ -1,0 +1,284 @@
+<head>
+  <style>
+      body {
+        font-family:Helvetica,sans-serif;
+      }
+      #treeContainer {
+        height:2000px;
+        width:2000px;
+        position:absolute;
+        min-width:90%;
+        /* max-width:100%; */
+        /* min-height:95%; */
+        margin:.5%;
+        padding:.5%;
+      }
+      .node_container {
+        z-index:1;
+        background: white;
+        opacity: 1;
+        border: 1px solid gray;
+        box-sizing:border-box;
+        border-left:5px solid green;
+        box-shadow: 2px 2px 5px gray;
+        overflow:auto;
+        position:absolute;
+        max-width:300px;
+        transform: translate(-50%,-50%);
+
+      }
+      .header {
+        font-size:2vh;
+        height:5vh;
+      }
+      .panel {
+        margin:1%;
+        padding:1%;
+        box-sizing:border-box;
+        border-left:5px solid green;
+        box-shadow: 2px 2px 5px gray;
+      }
+      .node_container:hover {
+        /* transform: translate(-50%,-50%) scale(2); */
+        z-index:2;
+        max-width:none;
+        width:35vw;
+        height:20vw;
+      }
+
+      .node_header{
+        float:left;
+        position:absolute;
+        padding:3%;
+        width:10%;
+        height:84%;
+        writing-mode:vertical-rl;
+        margin:auto;
+        text-align:center;
+        font-size:150%;
+        transform:rotate(180deg);
+      }
+
+      .connection {
+        stroke:black;
+        z-index:-1;
+      }
+      .sister_map {
+        float:right;
+        margin:auto;
+        height:100%;
+        max-width:84%;
+      }
+      .score_map {
+        float:right;
+        margin:auto;
+        height:100%;
+        max-width:84%;
+      }
+      .feature_header {
+        text-align:center;
+      }
+      .feature_table {
+        float:right;
+        margin:auto;
+        width:84%;
+        font-size:78%;
+      }
+      table {
+        font-size:inherit;
+      }
+      .decoration_type {
+        position:fixed;
+        left:1%;
+        bottom:1%;
+        z-index:3;
+        background-color:white;
+        font-size:1.5vh
+      }
+      .summary_button {
+        font-size:inherit;
+        width:100%;
+        display:block;
+        margin:1%;
+      }
+
+      .tooltip {
+        position: relative;
+        display: block;
+        float:right;
+        padding: .5vw;
+        margin: .5vw;
+        border-radius: .5vw;
+        background-color: springgreen;
+        font-size: large;
+        z-index:2;
+      }
+      .tooltip .tooltiptext {
+        top: 105%;
+        right: 105%;
+        visibility: hidden;
+        width: 20vw;
+        background-color: rgb(0,0,0,.9);
+        color: #fff;
+        text-align: left;
+        padding: 5px;
+        border-radius: 5px;
+        position: absolute;
+      }
+      .tooltip:hover .tooltiptext {
+        visibility: visible;
+      }
+
+    </style>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script>
+    $(document).ready(
+      function() {
+        insertNodes();
+        insertConnections();
+        decorateNodesSister();
+      });
+
+    function insertNodes() {
+      console.log(treeCoordinates);
+      let [height,width] = treeCoordinates[0];
+      x_total = 300 * (1/width)
+      y_total = 200 * (1/height)
+      document.getElementById('treeContainer').style.width = `${x_total}px`
+      document.getElementById('treeContainer').style.height = `${y_total}px`
+      width *= 110;
+      height *= 95;
+      let style_string = `<style>.node_container {width:${width}%;height:${height}%;}</style>`;
+      $("head").append(style_string);
+      console.log([width,height,]);
+      for (let [index,node] of treeCoordinates.slice(1)) {
+        let [x,y] = node.map(function (x) {return x*100});
+        console.log(`Node : ${[x,y]}`);
+        let style_spec =
+          `
+            top:${x}%;
+            left:${y}%;
+          `
+        let node_html = `<div id="${index}" class="node_container" style="${style_spec}">${index}</div>`;
+        $("#treeContainer").append(node_html);
+      }
+    }
+
+    function decorateNodesSister() {
+      $(".node_container").each(function (index,node) {
+        let name = clusterNames[index]
+        let header_element = `<h5 class="node_header">Cluster ${name}</h5>`;
+        node.innerHTML = header_element;
+        node.innerHTML += `<a href="./${index}/cluster_summary_template_js.html"><img class="sister_map" src="./${index}/sister_map.png"/></a>`;
+      });
+    }
+
+    function decorateNodesSample() {
+      $(".node_container").each(function (index,node) {
+        let name = clusterNames[index]
+        let header_element = `<h5 class="node_header">Cluster ${name}</h5>`;
+        node.innerHTML = header_element;
+        node.innerHTML += `<a href="./${index}/cluster_summary_template_js.html"><img class="score_map" src="./${index}/score_map.png"/></a>`;
+      });
+    }
+
+    function decorateNodesFeatures() {
+      $(".node_container").each(function (index,node) {
+        let html = `<a href="./${index}/cluster_summary_template_js.html">`;
+        html += `<h5 class="node_header">Cluster ${index}</h5>`;
+        html += `<h3 class="feature_header">Upregulated</h3>`;
+        html += `<div class="feature_table">${summaries[`cluster_${index}`].upregulatedHtml}</div>`;
+        html += `<h3 class="feature_header">Downregulated</h3>`;
+        html += `<div class="feature_table">${summaries[`cluster_${index}`].downregulatedHtml}</div>`;
+        html += '</a>';
+        node.innerHTML = html;
+      });
+    }
+
+    function insertConnections() {
+      console.log(connections);
+      let connection_string = "";
+      for (c of connections) {
+        let [y,x,cy,cx,t] = c.map(function (x){return 100*x});
+        let coordinate_spec =
+        `
+        x1="${x}%"
+        y1="${y}%"
+        x2="${cx}%"
+        y2="${cy}%"
+        `;
+        // let line_html = `<line class="connection" ${coordinate_spec}></line>`;
+        let style_spec =
+        `
+        stroke-width:${t/10000}px;
+        `;
+        let line_html = `<line class="connection" ${coordinate_spec} style="${style_spec}"></line>`;
+        connection_string = connection_string + line_html;
+        // $("#lineContainer").append(line_html);
+
+      }
+      let svg_string = `<svg id="lineContainer" height="100%" width="100%" style="position:absolute;">${connection_string}</svg>`;
+      $("#treeContainer").append(svg_string);
+    }
+
+
+  </script>
+</head>
+<body>
+  <script>
+    let summaries = {};
+  </script>
+  <h1 class="panel"> Random Forest Consensus Tree</h1>
+  <div class="tooltip" style="float:right;">
+    Lots of Info
+      <div class="tooltiptext" style="width:80vw;">
+      This tool helps you decompose large, high-dimensional data into hierarchal substructures.
+      <br><br>
+      <ul>
+      <li>Each cluster you see here represents a split that happens often when a random
+      forest is trained on your data in an unsupervised manner.
+      <br><br>
+      <small>More technically, each node you see is a collection of individual nodes in the RF
+      that were clustered together, and the properties of each node cluster are average properties of the member nodes.
+      Clustering procedures used to construct these clusters can vary, but by default they are constructed based on changes
+      in the mean of the output labels for samples the node relative to its parent.</small>
+      <br><br>
+      <li>Each cluster can tell you which samples it frequently observes, and which samples
+      its sister nodes frequently observe.
+      <br><br>
+      <small>Because each cluster observes some samples more often than others, each cluster represents a subspace
+      of your data. The samples in each subsapce are more similar to each other than they are to samples elsewhere.
+      Intuitively you can think of the clusters presented here as hierarchicaclly clustering your data.</small>
+      <br><br>
+      <li>Each cluster can tell you what changes in output labels it predicts.
+      <br><br>
+      <small>The behavior of features in a subspace might be different than the behavior of features
+      globally. Depending on your data, each subspace might have totally unique feature covariances. Random Forests are helpful in finding out if this is the case. </small>
+      <br><br>
+      <li><small>Empirically, we observe that the nodes in each cluster usually have a well-defined relationship to nodes in other clusters, but it is not as easy to build
+      an appealing visual representation of the transitions that frequently occur between nodes. The consensus tree on the left is an approximate best guess, but
+      for your convenience we also provide a probability ratio measure, which tells you how much more likely you are to encounter a sample in one cluster given that you have already seen it in another.
+      Additionally we also provide you with transition counts for each cluster to each other cluster.</small>
+      </ul>
+    </div>
+  </div>
+  <div class="tooltip" style="float:right;">
+    Info
+      <div class="tooltiptext">
+      Quick tips:
+      <ul>
+      <li>Approximate consensus decision tree among all trees in the random forest. <br><br>
+      <li>The root is cluster 0, on the lefthand side. <br><br>
+      <li>Try zooming! <pre>ctrl + / ctrl - </pre> OR <pre> cmd + / cmd - </pre>
+      </ul>
+    </div>
+  </div>
+  <div id="treeContainer">
+  </div>
+  <div class="decoration_type panel">
+      <h2> Switch Node Summary </h2>
+      <button class="summary_button" onclick="decorateNodesSample()"> Sample Frequency </button>
+      <button class="summary_button" onclick="decorateNodesSister()"> Sister Scores </button>
+      <button class="summary_button" onclick="decorateNodesFeatures()"> Changed Features </button>
+  </div>
+</body>
