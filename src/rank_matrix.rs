@@ -40,16 +40,16 @@ impl RankMatrix {
         let mut meta_vector = Vec::new();
 
         for (i,loc_counts) in counts.into_iter().enumerate() {
-            if i%200 == 0 {
-                println!("Initializing: {}",i);
-            }
+            // if i%200 == 0 {
+            //     // println!("Initializing: {}",i);
+            // }
             let mut construct = RankVector::<Vec<Node>>::link(loc_counts);
             meta_vector.push(construct);
         }
 
         let dim = (meta_vector.len(),meta_vector.get(0).map(|x| x.raw_len()).unwrap_or(0));
 
-        println!("Made rank table with {} features, {} samples:", dim.0,dim.1);
+        // println!("Made rank table with {} features, {} samples:", dim.0,dim.1);
 
         let rm = RankMatrix {
             meta_vector:meta_vector,

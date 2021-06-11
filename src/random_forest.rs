@@ -91,7 +91,7 @@ impl Forest {
 
     pub fn generate(&mut self) -> Result<(),Error> {
 
-        for i in (0..self.parameters.tree_limit) {
+        let results: Vec<Result<(),Error>> = (0..self.parameters.tree_limit).into_par_iter().map(|i| {
 
             println!("Computing tree {}",i);
 
@@ -106,10 +106,30 @@ impl Forest {
 
             let specific_address = format!("{}.tree_{}.compact",self.parameters.report_address,i);
 
-            root.to_serial().dump(specific_address)?;
-        }
+            root.to_serial().dump(specific_address)
+        }).collect();
 
-        Ok(())
+        results.into_iter().try_fold((),|acc,x| x)
+
+    //     for i in (0..self.parameters.tree_limit) {
+    //
+    //         println!("Computing tree {}",i);
+    //
+    //         let mut root = Node::prototype(
+    //                     &self.input_features,
+    //                     &self.output_features,
+    //                     &self.samples,
+    //                     &self.parameters,
+    //                 );
+    //
+    //         root.grow(&self.prototype,&self.parameters);
+    //
+    //         let specific_address = format!("{}.tree_{}.compact",self.parameters.report_address,i);
+    //
+    //         root.to_serial().dump(specific_address)?;
+    //     }
+    //
+    //     Ok(())
     }
 
 

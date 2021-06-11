@@ -42,9 +42,6 @@ use crate::fast_nipal_vector::{project,Projection};
 
 use rayon::prelude::*;
 
-// Prefer braid thickness to to be odd to make consensus braids work well
-// const BRAID_THICKNESS: usize = 3;
-
 #[derive(Clone,Debug)]
 pub struct Node {
 
