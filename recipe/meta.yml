@@ -1,0 +1,20 @@
+package:
+  name: rusty_axe
+  version: 0.5
+
+source:
+  git_url: https://github.com/bbrener1/rf_5
+  git_depth: 1
+
+requirements:
+  build:
+    - git
+    - rust
+  run:
+    - python
+    - numpy
+    - scipy
+    - matplotlib
+    -
+    - scanpy
+    - louvain
