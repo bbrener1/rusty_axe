@@ -21,6 +21,7 @@ then {
   # If cargo isn't present check for rustup
   if ! rustup > /dev/null
   then {
+    # Download rustup, install, and reload the path via source.
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     source ~/.bash_profile || source ~/.bashrc || echo "Failed to source a new path variable. Please run this script a second time"
   }
@@ -31,7 +32,7 @@ then {
 }
 fi
 
-
+# Check to make sure cargo installed successfully
 if ! cargo > /dev/null
 then
   echo "Failed to install cargo"
@@ -44,7 +45,7 @@ mkdir html
 # Build
 cargo build --release
 
-if [[ -f ./rf_5/target/release/rf_5]]
+if [[ -f ./target/release/rf_5 ]]
 then
   echo "Installed successfully"
   exit 0
