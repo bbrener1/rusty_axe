@@ -91,23 +91,25 @@ impl Forest {
 
     pub fn generate(&mut self) -> Result<(),Error> {
 
-        let results: Vec<Result<(),Error>> = (0..self.parameters.tree_limit).into_par_iter().map(|i| {
+        let results: Vec<Result<(),Error>> = (0..self.parameters.tree_limit)
+            .into_par_iter()
+            .map(|i| {
 
-            println!("Computing tree {}",i);
+                println!("Computing tree {}",i);
 
-            let mut root = Node::prototype(
-                        &self.input_features,
-                        &self.output_features,
-                        &self.samples,
-                        &self.parameters,
-                    );
+                let mut root = Node::prototype(
+                            &self.input_features,
+                            &self.output_features,
+                            &self.samples,
+                            &self.parameters,
+                        );
 
-            root.grow(&self.prototype,&self.parameters);
+                root.grow(&self.prototype,&self.parameters);
 
-            let specific_address = format!("{}.tree_{}.compact",self.parameters.report_address,i);
+                let specific_address = format!("{}.tree_{}.compact",self.parameters.report_address,i);
 
-            root.to_serial().dump(specific_address)
-        }).collect();
+                root.to_serial().dump(specific_address)
+            }).collect();
 
         results.into_iter().try_fold((),|acc,x| x)
 
@@ -145,111 +147,4 @@ mod random_forest_tests {
     use std::fs::remove_file;
     use std::env;
 
-    // #[test]
-    // fn test_forest_initialization_trivial() {
-    //     Forest::initialize_from(vec![],vec![],Parameters::empty() , "../testing/test_trees");
-    // }
-
-    #[test]
-    fn test_forest_initialization_simple() {
-        let counts = arr_from_vec2(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]]);
-        Forest::initialize_from(counts.clone(),counts.clone(),Parameters::empty());
-    }
-
-    #[test]
-    fn test_forest_initialization_iris() {
-        let iris_vec = read_matrix("./testing/iris.tsv");
-        let iris = arr_from_vec2(iris_vec);
-        // let features = read_header("../testing/iris.features");
-        Forest::initialize_from(iris.clone(),iris.clone(),Parameters::empty());
-    }
-    //
-    // #[test]
-    // fn test_forest_bootstrap() {
-    //     let iris_vec = read_matrix("./testing/iris.tsv");
-    //     let iris = arr_from_vec2(iris_vec);
-    //     // let features = read_header("../testing/iris.features");
-    //     let mut forest = Forest::initialize_from(iris.clone(),iris.clone(),Parameters::empty(),"./testing/err");
-    //
-    //     forest.bootstrap(None);
-    // }
-
-
-    // #[test]
-    // fn test_forest_reconstitution_simple() {
-    //     let params = Parameters::empty();
-    //     params.backup_vec = Some(vec!["./testing/precomputed_trees/simple.0.compact".to_string(), "./testing/precomputed_trees/simple.1.compact".to_string()]);
-    //     let new_forest = Forest::compact_reconstitute(Arc::new(params),"./testing/").expect("Reconstitution test");
-    //
-    //     println!("Reconstitution successful");
-    //
-    //     let reconstituted_features: Vec<String> = new_forest.predictive_trees()[0].crawl_nodes().iter().map(|x| x.feature().clone()).filter(|x| x.is_some()).map(|x| x.unwrap()).collect();
-    //     let correct_features: Vec<String> = vec!["0","0","0","0","0","0"].iter().map(|x| x.to_string()).collect();
-    //     assert_eq!(reconstituted_features,correct_features);
-    //
-    //
-    //     let correct_splits: Vec<f64> = vec![-1.,-2.,20.,10.,10.,5.];
-    //     let reconstituted_splits: Vec<f64> = new_forest.predictive_trees()[0].crawl_nodes().iter().map(|x| x.split().clone()).filter(|x| x.is_some()).map(|x| x.unwrap()).collect();
-    //     assert_eq!(reconstituted_splits,correct_splits);
-    // }
-    //
-    //
-    // #[test]
-    // fn test_forest_reconstitution() {
-    //     let new_forest = Forest::compact_reconstitute(TreeBackups::Vector(vec!["./testing/precomputed_trees/iris.0.compact".to_string(),"./testing/precomputed_trees/iris.1.compact".to_string()]), None, None, Some(1), "./testing/").expect("Reconstitution test");
-    //
-    //     println!("Reconstitution successful");
-    //
-    //     let reconstituted_features: Vec<String> = new_forest.predictive_trees()[0].crawl_nodes().iter().map(|x| x.feature().clone()).filter(|x| x.is_some()).map(|x| x.unwrap()).collect();
-    //     let correct_features: Vec<String> = vec!["sepal_length","petal_length","sepal_width","sepal_width","sepal_length","sepal_width","sepal_width","sepal_width","sepal_width","sepal_width"].iter().map(|x| x.to_string()).collect();
-    //     assert_eq!(reconstituted_features,correct_features);
-    //
-    //
-    //     let correct_splits: Vec<f64> = vec![1.5,5.7,1.2,1.1,4.9,1.8,1.4,2.2,1.8,1.];
-    //     let reconstituted_splits: Vec<f64> = new_forest.predictive_trees()[0].crawl_nodes().iter().map(|x| x.split().clone()).filter(|x| x.is_some()).map(|x| x.unwrap()).collect();
-    // }
-
-    // #[test]
-    // fn test_forest_generation() {
-    //
-    //     let counts = read_counts("./testing/iris.drop");
-    //     let features = read_header("./testing/iris.features");
-    //
-    //     let mut params = Parameters::empty();
-    //
-    //     params.leaf_size_cutoff = Some(10);
-    //
-    //
-    //     params.input_features = Some(4);
-    //     params.output_features = Some(4);
-    //     params.sample_subsample = Some(150);
-    //     params.processor_limit = Some(1);
-    //     params.counts = Some(counts.clone());
-    //     params.feature_names = Some(features);
-    //     params.tree_limit = Some(1);
-    //     params.auto();
-    //
-    //     let arc_params = Arc::new(params);
-    //
-    //     let mut new_forest = Forest::initialize(&counts,arc_params.clone(), "./testing/tmp_test");
-    //     new_forest.generate(arc_params.clone(), true);
-    //
-    //
-    //     let computed_features: Vec<String> = new_forest.predictive_trees()[0].crawl_nodes().iter().map(|x| x.feature().clone()).filter(|x| x.is_some()).map(|x| x.unwrap()).collect();
-    //     let correct_features: Vec<String> = vec!["sepal_length","petal_length","sepal_width","sepal_width","sepal_length","sepal_width","sepal_width","sepal_width","sepal_width","sepal_width"].iter().map(|x| x.to_string()).collect();
-    //     assert_eq!(computed_features,correct_features);
-    //
-    //
-    //     let computed_splits: Vec<f64> = new_forest.predictive_trees()[0].crawl_nodes().iter().map(|x| x.split().clone()).filter(|x| x.is_some()).map(|x| x.unwrap()).collect();
-    //     let correct_splits: Vec<f64> = vec![1.5,5.7,1.2,1.1,4.9,1.8,1.4,2.2,1.8,1.];
-    //     assert_eq!(computed_splits,correct_splits);
-    //
-    //
-    //     remove_file("./testing/tmp_test.0");
-    //     remove_file("./testing/tmp_test.0.summary");
-    //     remove_file("./testing/tmp_test.0.dump");
-    //     remove_file("./testing/tmp_test.1");
-    //     remove_file("./testing/tmp_test.1.summary");
-    //     remove_file("./testing/tmp_test.1.dump");
-    // }
 }

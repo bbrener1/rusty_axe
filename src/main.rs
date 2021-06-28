@@ -116,8 +116,8 @@ impl Sample {
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
 pub struct Filter {
-    projection: ForestProjection,
-    threshold: f64,
+    reduction: Reduction,
+    split: f64,
     orientation: bool,
 }
 
@@ -127,24 +127,24 @@ impl Filter {
     // indices
 
     pub fn filter_matrix(&self, mtx: &Array2<f64>) -> Vec<usize> {
-        let scores = self.projection.score_matrix(mtx);
+        let scores = self.reduction.score_matrix(mtx);
         if self.orientation {
-            scores.into_iter().enumerate().filter(|(i,s)| **s > self.threshold).map(|(i,s)| i).collect()
+            scores.into_iter().enumerate().filter(|(i,s)| **s > self.split).map(|(i,s)| i).collect()
         }
         else {
-            scores.into_iter().enumerate().filter(|(i,s)| **s < self.threshold).map(|(i,s)| i).collect()
+            scores.into_iter().enumerate().filter(|(i,s)| **s < self.split).map(|(i,s)| i).collect()
         }
     }
 
-    pub fn new(features:Vec<Feature>,means:Vec<f64>,weights:Vec<f64>,threshold:f64,orientation:bool) -> Filter {
-        let projection = ForestProjection {
+    pub fn new(features:Vec<Feature>,means:Vec<f64>,scores:Vec<f64>,split:f64,orientation:bool) -> Filter {
+        let reduction = Reduction {
             features,
             means,
-            weights,
+            scores,
         };
         Filter {
-            projection,
-            threshold,
+            reduction,
+            split,
             orientation,
         }
     }
@@ -157,27 +157,27 @@ impl Filter {
 // A forest projection allows us to form projections from multiple features of a random forest
 // calculated elsewhere via NIPALS.
 
-pub struct ForestProjection {
+pub struct Reduction {
     features: Vec<Feature>,
     means: Vec<f64>,
-    weights: Vec<f64>,
+    scores: Vec<f64>,
 }
 
-impl ForestProjection {
+impl Reduction {
 
-    pub fn new(features:Vec<Feature>,means:Vec<f64>,weights:Vec<f64>) -> ForestProjection {
-        ForestProjection {
+    pub fn new(features:Vec<Feature>,means:Vec<f64>,scores:Vec<f64>) -> Reduction {
+        Reduction {
             features,
             means,
-            weights,
+            scores,
         }
     }
 
-    pub fn trivial(feature:Feature) -> ForestProjection {
-        ForestProjection {
+    pub fn trivial(feature:Feature) -> Reduction {
+        Reduction {
             features: vec![feature],
             means: vec![0.],
-            weights: vec![1.],
+            scores: vec![1.],
         }
     }
 
@@ -185,7 +185,7 @@ impl ForestProjection {
 
     pub fn score_sample(&self,sample:&Array1<f64>) -> f64 {
         let mut score = 0.;
-        for (feature,(mean,weight)) in self.features.iter().zip(self.means.iter().zip(self.weights.iter())) {
+        for (feature,(mean,weight)) in self.features.iter().zip(self.means.iter().zip(self.scores.iter())) {
             let index = feature.index;
             score += (sample[index] - mean) * weight;
         }
@@ -196,12 +196,12 @@ impl ForestProjection {
 
     pub fn score_matrix(&self,mtx:&Array2<f64>) -> Array1<f64> {
         let means = Array1::from(self.means.clone());
-        let weights = Array1::from(self.weights.clone());
+        let scores = Array1::from(self.scores.clone());
         let mut selected = mtx.select(Axis(1),&self.features.iter().map(|f| f.index).collect::<Vec<usize>>()).clone();
         for mut r in selected.axis_iter_mut(Axis(0)) {
             r -= &means;
         };
-        selected.dot(&weights)
+        selected.dot(&scores)
     }
 
 }

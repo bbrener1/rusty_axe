@@ -37,15 +37,28 @@ impl RankMatrix {
 
     pub fn new<'a> (counts: Vec<Vec<f64>>, parameters:&Parameters) -> RankMatrix {
 
-        let mut meta_vector = Vec::new();
+        // let mut meta_vector = Vec::new();
+        //
+        // for (i,loc_counts) in counts
+        //     .into_iter()
+        //     .enumerate()
+        //      {
+        //     // if i%200 == 0 {
+        //     //     // println!("Initializing: {}",i);
+        //     // }
+        //     let mut construct = RankVector::<Vec<Node>>::link(loc_counts);
+        //     meta_vector.push(construct);
+        // }
 
-        for (i,loc_counts) in counts.into_iter().enumerate() {
-            // if i%200 == 0 {
-            //     // println!("Initializing: {}",i);
-            // }
-            let mut construct = RankVector::<Vec<Node>>::link(loc_counts);
-            meta_vector.push(construct);
-        }
+        let mut meta_vector: Vec<RankVector<Vec<Node>>> = counts
+            .into_par_iter()
+            .enumerate()
+            .map(|(i,loc_counts)|{
+                // if i%200 == 0 {
+                //     // println!("Initializing: {}",i);
+                // }
+                RankVector::<Vec<Node>>::link(loc_counts)
+        }).collect();
 
         let dim = (meta_vector.len(),meta_vector.get(0).map(|x| x.raw_len()).unwrap_or(0));
 
@@ -242,9 +255,19 @@ impl RankMatrix {
         for mut feature in reverse_dispersions.axis_iter_mut(Axis(1)) {
             feature *= &reverse_regularization;
         }
-        let mut dispersions = Array2::<f64>::zeros(((draw_order.len()+1,self.dimensions.0)));
 
-        let dispersions = forward_dispersions + reverse_dispersions;
+        let mut dispersions = &forward_dispersions + &reverse_dispersions;
+
+        for (i,mut feature) in dispersions.axis_iter_mut(Axis(1)).enumerate() {
+            if forward_dispersions[[0,i]] > 0. {
+                feature /= forward_dispersions[[0,i]];
+            }
+            else {
+                feature.fill(1.);
+            };
+
+        }
+        // println!("{:?}",dispersions);
 
         Some(dispersions)
 
@@ -264,8 +287,8 @@ impl RankMatrix {
 
         let minima: Vec<Option<(usize,usize,f64)>> =
             draw_orders
-                .into_iter()
-                // .into_par_iter()
+                // .into_iter()
+                .into_par_iter()
                 .enumerate()
                 .map(|(i,draw_order)| {
                     let ordered_dispersions = output_matrix.order_dispersions(&draw_order,&feature_weights)?;

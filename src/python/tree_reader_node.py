@@ -106,8 +106,28 @@ class Node:
         # Obtains the count matrix of samples belonging to this node
         # Samples are in order they are in the node
 
-        copy = self.forest.output[self.samples()].copy()
+        copy = self.forest.output[self.encoding()].copy()
         return copy
+
+    def compute_cache(self):
+
+        for child in self.children:
+            child.compute_cache()
+
+        self.cache = True
+
+        counts = self.node_counts()
+        means = np.mean(counts, axis=0)
+        medians = np.median(counts,axis=0)
+        srs = np.sum(np.power(counts - means,2),axis=0)
+
+        self.mean_cache = means
+        self.median_cache = medians
+        self.srs_cache = srs
+
+        for child in self.children:
+            additive_mean = child.means() - means
+            child.additive_mean_cache = additive_mean
 
     def medians(self):
 
@@ -116,11 +136,24 @@ class Node:
         if self.cache:
             if hasattr(self, 'median_cache'):
                 return self.median_cache
-        matrix = self.forest.output[self.sample_mask()]
+        matrix = self.node_counts()
         medians = np.median(matrix, axis=0)
         if self.cache:
             self.median_cache = medians
         return medians
+
+    def means(self):
+
+        # Means of all features within this node. Relies on node_counts
+
+        if self.cache:
+            if hasattr(self, 'mean_cache'):
+                return self.mean_cache
+        matrix = self.node_counts()
+        means = np.mean(matrix, axis=0)
+        if self.cache:
+            self.mean_cache = means
+        return means
 
     def feature_median(self, feature):
 
@@ -132,18 +165,6 @@ class Node:
         values = self.forest.output[self.sample_mask()].T[fi]
         return np.median(values)
 
-    def means(self):
-
-        # Means of all features within this node. Relies on node_counts
-
-        if self.cache:
-            if hasattr(self, 'mean_cache'):
-                return self.mean_cache
-        matrix = self.forest.output[self.sample_mask()]
-        means = np.mean(matrix, axis=0)
-        if self.cache:
-            self.mean_cache = means
-        return means
 
     def sample_cluster_means(self):
 
@@ -189,9 +210,9 @@ class Node:
 
             c1ss = np.power(self.means() - c1.means(),2) * len(c1.samples())
             c2ss = np.power(self.means() - c2.means(),2) * len(c2.samples())
-            rss = np.sum(np.power(self.mean_residuals(),2),axis=0)
-            ratios = (c1ss + c2ss) / rss
-            ratios[rss == 0] = 0
+            srs = self.squared_residual_sum()
+            ratios = 1 - ((c1ss + c2ss) / srs)
+            ratios[srs == 0] = 1
             additive = self.additive_mean_gains()
             partials = additive * ratios
 
@@ -242,9 +263,18 @@ class Node:
 
         return self_srs,parent_srs
 
+    # def coefficient_of_determination(self):
+    #     self_srs,parent_srs = self.squared_residual_doublet()
+    #     cod = 1 - np.sum(self_srs)/np.sum(parent_srs)
+    #     return cod
     def coefficient_of_determination(self):
-        self_srs,parent_srs = self.squared_residual_doublet()
-        cod = 1 - np.sum(self_srs)/np.sum(parent_srs)
+        self_srs = self.squared_residual_sum()
+        if self.parent is not None:
+            parent_srs = self.parent.squared_residual_sum()
+            cod = 1 - (np.sum(self_srs)/self.pop())/(np.sum(parent_srs)/self.parent.pop())
+        else:
+            cod = np.zeros(self.pop)
+
         return cod
 
     def dispersions(self, mode='mean'):
@@ -774,20 +804,20 @@ class Node:
 class Filter:
 
     def __init__(self, filter_json, node):
-        if filter_json is None:
-            self.node = node
-            self.threshold = 1.
-            self.orientation = False
-            self.projection = Projection(None)
-        else:
-            try:
+        try:
+            if filter_json is None:
                 self.node = node
-                self.projection = Projection(filter_json['projection'])
-                self.threshold = filter_json['threshold']
+                self.reduction = Reduction(None)
+                self.split = 1.
+                self.orientation = False
+            else:
+                self.node = node
+                self.reduction = Reduction(filter_json['reduction'])
+                self.split = filter_json['split']
                 self.orientation = filter_json['orientation']
-            except:
-                print(filter_json)
-                raise Exception
+        except:
+            print(filter_json)
+            raise Exception
 
     def derived_copy(self):
         self_copy = copy(self)
@@ -795,41 +825,41 @@ class Filter:
         return self_copy
 
     def feature(self):
-        if len(self.projection.features) == 1:
-            return self.projection.features[0]
+        if len(self.reduction.features) == 1:
+            return self.reduction.features[0]
         else:
             raise Exception
 
     def filter(self, sample):
-        sample_score = self.projection.score_sample(sample)
+        sample_score = self.reduction.score_sample(sample)
         if self.orientation:
-            return sample_score > self.threshold
+            return sample_score > self.split
         else:
-            return sample_score <= self.threshold
+            return sample_score <= self.split
 
     def filter_matrix(self, matrix):
-        scores = self.projection.score_matrix(matrix)
+        scores = self.reduction.score_matrix(matrix)
         if self.orientation:
-            return scores > self.threshold
+            return scores > self.split
         else:
-            return scores <= self.threshold
+            return scores <= self.split
 
 
-class Projection:
+class Reduction:
 
-    def __init__(self, projection_json):
-        if projection_json is None:
+    def __init__(self, reduction_json):
+        if reduction_json is None:
             self.features = []
-            self.weights = np.zeros(0)
-            self.means = np.zeros(0)
+            self.scores = []
+            self.means = []
         else:
-            self.features = [f['index'] for f in projection_json['features']]
-            self.weights = projection_json['weights']
-            self.means = projection_json['means']
+            self.features = [f['index'] for f in reduction_json['features']]
+            self.scores = reduction_json['scores']
+            self.means = reduction_json['means']
 
     def score_sample(self, sample):
         compound_score = 0
-        for feature, feature_score, feature_mean in zip(self.features, self.weights, self.means):
+        for feature, feature_score, feature_mean in zip(self.features, self.scores, self.means):
             compound_score += (sample[feature] - feature_mean) * feature_score
         return compound_score
 
@@ -837,5 +867,5 @@ class Projection:
         compound_scores = np.zeros(matrix.shape[0])
         if len(self.features) > 0:
             compound_scores = np.sum(
-                (matrix.T[self.features].T - self.means) * self.weights, axis=1)
+                (matrix.T[self.features].T - self.means) * self.scores, axis=1)
         return compound_scores

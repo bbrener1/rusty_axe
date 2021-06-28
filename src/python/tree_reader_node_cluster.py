@@ -352,22 +352,42 @@ class NodeCluster:
         return correlations
 
 
-    def most_local_correlations(self, n=10,method='mean'):
+    def most_local_correlations_uncorrected(self, n=10,method='mean'):
 
-        _,_,important_indices = self.important_features(n=n,method=method)
+        global_correlations = self.forest.global_correlations()
+        local_correlations = self.local_correlations()
 
-        global_correlations = self.forest.global_correlations(indices=important_indices)
-        local_correlations = self.local_correlations(indices=important_indices)
-
-        delta = local_correlations - global_correlations
+        delta = np.triu(local_correlations - global_correlations)
 
         ranks = np.argsort(np.abs(delta.flatten()))
 
         tiled_indices = np.tile(
-            important_indices, ((delta.shape[0]), 1))
+            np.arange(delta.shape[0]), ((delta.shape[0]), 1))
 
         ranked = list(zip(tiled_indices.flatten()[
             ranks], tiled_indices.T.flatten()[ranks]))
+
+        return ranked[-n:]
+
+    def most_local_correlations(self, n=10,method='mean'):
+
+        _,_,important_indices = self.important_features(n=n*10,method=method)
+
+        # Dedupe
+        important_indices = list(set(important_indices))
+
+        global_correlations = self.forest.global_correlations(indices=important_indices)
+        local_correlations = self.local_correlations(indices=important_indices)
+
+        delta = np.triu(local_correlations - global_correlations)
+        delta = delta * local_correlations
+
+        ranks = np.argsort(np.abs(delta.flatten()))
+
+        ranks_j = (ranks%delta.shape[0]).astype(dtype='int')
+        ranks_i = ((ranks -  ranks_j)/delta.shape[1]).astype(dtype='int')
+
+        ranked = list(zip([important_indices[i] for i in ranks_i],[important_indices[j] for j in ranks_j]))
 
         return ranked[-n:]
 

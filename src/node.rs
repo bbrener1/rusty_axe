@@ -205,10 +205,15 @@ impl Node {
 
     pub fn local_split(&mut self,prototype:&Prototype,parameters:&Parameters) -> Option<(Filter,Filter)> {
 
+        // println!("Generating matrices");
+
         let input_ranks = self.input_rank_matrix(prototype, parameters);
         let output_ranks = self.output_rank_matrix(prototype, parameters);
 
+        // println!("Matrices ready,splitting");
+
         let (local_feature,local_sample,local_threshold) = RankMatrix::split_input_output(input_ranks,output_ranks,parameters)?;
+
         //
         // println!("Local Split: {},{},{}",local_feature,local_sample,local_threshold);
 

@@ -1,5 +1,5 @@
 from tree_reader_utils import fast_knn, double_fast_knn, hacked_louvain, generate_feature_value_html,sister_distance
-from tree_reader_node import Node, Projection, Filter
+from tree_reader_node import Node, Reduction, Filter
 from tree_reader_prediction import Prediction
 from tree_reader_sample_cluster import SampleCluster
 from tree_reader_node_cluster import NodeCluster
@@ -525,6 +525,12 @@ class Forest:
         self.cache = value
         for node in self.nodes():
             node.cache = value
+
+    def compute_cache(self):
+        for i,tree in enumerate(self.trees):
+            print(f"Tree {i}",end='\r')
+            tree.root.compute_cache()
+        print("")
 
     def reset_cache(self):
         for node in self.nodes():

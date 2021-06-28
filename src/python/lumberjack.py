@@ -21,6 +21,8 @@ import tree_reader as tr
 import numpy as np
 # import matplotlib.pyplot as plt
 
+RUST_PATH = str((Path(__file__).parent /
+                    "../../target/release/rf_5").resolve())
 
 def main(location, input, output=None, ifh=None, ofh=None, **kwargs):
     # print("Tree reader?")
@@ -120,17 +122,15 @@ def inner_fit(input_counts, output_counts, location, backtrace=False, lrg_mem=No
 
     # targets = "\n".join(["\t".join([str(y) for y in x]) for x in targets]) + "\n"
 
-    path_to_rust = (Path(__file__).parent /
-                    "../../target/release/rf_5").resolve()
 
-    print("Running " + str(path_to_rust))
+    print("Running " + RUST_PATH)
 
     arg_list = []
 
     # if backtrace:
     #     arg_list.append("RUST_BACKTRACE=1")
 
-    arg_list.extend([str(path_to_rust), "-ic", location + "input.counts",
+    arg_list.extend([RUST_PATH, "-ic", location + "input.counts",
                      "-oc", location + "output.counts", "-o", location + "tmp", "-auto"])
 
     for arg in kwargs.keys():
