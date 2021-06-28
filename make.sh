@@ -30,6 +30,8 @@ then {
 }
 fi
 
+source ~/.bash_profile
+
 if ! cargo > /dev/null
 then
   echo "Failed to install cargo"
