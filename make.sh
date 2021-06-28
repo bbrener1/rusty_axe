@@ -22,14 +22,13 @@ cargo || {
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
   }
   # Add cargo when rustup is present
-  rustup component add cargo
 }
 
 # Setup the html directory for reports/consensus trees
 mkdir html
 
 # Build
-cargo build --release
+bash cargo build --release
 
 if [[ -f ./rf_5/target/release/rf_5]]
 then
