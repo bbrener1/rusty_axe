@@ -7,7 +7,7 @@ set -e
 git --version || echo "Git is a prerequisite for this tool, I don't want to put it in the wrong place for you. Please install yourself."
 
 # Check to see if the rust configuration is weird:
-if rustc && [ ! cargo ]
+if rustc && [ ! $(cargo > /dev/null) ]
 then {
   echo "I see rustc but not cargo. If you are an advanced user please clone and compile the code directly from https://github.com/bbrener1/rf_5."
   exit 1
