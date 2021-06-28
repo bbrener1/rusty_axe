@@ -4,7 +4,7 @@ set -e
 
 # First check for git:
 
-git --version || echo "Git is a prerequisite for this tool, I don't want to put it in the wrong place for you. Please install yourself."
+git --version > /dev/null || echo "Git is a prerequisite for this tool, I don't want to put it in the wrong place for you. Please install yourself."
 
 # Check to see if the rust configuration is weird:
 if rustc>/dev/null && [ ! cargo>/dev/null ]
