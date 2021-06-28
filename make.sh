@@ -22,6 +22,7 @@ then {
   if ! rustup > /dev/null
   then {
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    source ~/.bash_profile || source ~/.bashrc || echo "Failed to source a new path variable. Please run this script a second time"
   }
   else {
     rustup component add cargo
@@ -30,7 +31,6 @@ then {
 }
 fi
 
-source ~/.bash_profile
 
 if ! cargo > /dev/null
 then
