@@ -43,7 +43,7 @@ fi
 mkdir html
 
 # Build
-cargo build --release > /dev/null
+cargo build --release 2>/dev/null
 
 if [[ -f ./target/release/rf_5 ]]
 then
