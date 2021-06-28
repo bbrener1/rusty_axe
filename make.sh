@@ -16,19 +16,31 @@ fi
 
 # Check for cargo
 
-cargo || {
+if ! cargo > /dev/null
+then {
   # If cargo isn't present check for rustup
-  rustup || {
+  if ! rustup > /dev/null
+  then {
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
   }
-  # Add cargo when rustup is present
+  else {
+    rustup component add cargo
+  }
+  fi
 }
+fi
+
+if ! cargo > /dev/null
+then
+  echo "Failed to install cargo"
+  exit 1
+fi
 
 # Setup the html directory for reports/consensus trees
 mkdir html
 
 # Build
-bash cargo build --release
+cargo build --release
 
 if [[ -f ./rf_5/target/release/rf_5]]
 then
