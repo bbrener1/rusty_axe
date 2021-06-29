@@ -8,13 +8,20 @@ source:
 
 requirements:
   build:
+
+  run:
     - git
     - rust
-  run:
     - python
     - numpy
     - scipy
     - matplotlib
-    -
+    - seaborn
+    - scikit-learn
+    - statsmodels
+    - numba
+    - pytables
+    - python-igraph
+    - leidenalg
     - scanpy
     - louvain
