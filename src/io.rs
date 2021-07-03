@@ -31,10 +31,9 @@ use ndarray::Array2;
 // }
 
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,Serialize,Deserialize)]
 pub struct Parameters {
     auto: bool,
-    pub command: Command,
     pub unsupervised: bool,
     // pub stdin: bool,
     pub input_count_array_file: String,
@@ -62,6 +61,7 @@ pub struct Parameters {
 
     pub averaging_mode: AveragingMode,
     pub norm_mode: NormMode,
+    pub standardize: bool,
     pub weighing_mode: WeighingMode,
     pub dispersion_mode: DispersionMode,
     pub split_fraction_regularization: f64,
@@ -73,7 +73,6 @@ impl Parameters {
     pub fn empty() -> Parameters {
         let arg_struct = Parameters {
             auto: false,
-            command: Command::Combined,
             unsupervised: false,
             // stdin:false,
             input_count_array_file: "".to_string(),
@@ -106,6 +105,7 @@ impl Parameters {
 
             averaging_mode: AveragingMode::Arithmetic,
             norm_mode: NormMode::L2,
+            standardize: true,
             weighing_mode: WeighingMode::Flat,
             dispersion_mode: DispersionMode::SSME,
             split_fraction_regularization: 1.,
@@ -191,6 +191,9 @@ impl Parameters {
                 "-n" | "-norm" | "-norm_mode" => {
                     arg_struct.norm_mode = NormMode::read(&args.next().expect("Failed to read norm mode"));
                 },
+                "-std" | "-s" => {
+                    arg_struct.standardize = true;
+                }
                 "-t" | "-trees" => {
                     arg_struct.tree_limit = args.next().expect("Error processing tree count").parse::<usize>().expect("Error parsing tree count");
                 },
@@ -345,44 +348,6 @@ impl BoostMode {
 }
 
 
-#[derive(Debug,Clone)]
-pub enum Command {
-    Combined,
-    Construct,
-    Predict,
-    Analyze
-    // Gradient,
-}
-
-impl Command {
-
-    pub fn parse(command: &str) -> Command {
-
-        match &command[..] {
-            "construct" | "generate" => {
-                Command::Construct
-            },
-            "predict" => {
-                Command::Predict
-            },
-            "construct_predict" | "conpred" | "combined" => {
-                Command::Combined
-            }
-            "analyze" => {
-                Command::Analyze
-            }
-            // "gradient" => {
-            //     Command::Gradient
-            // }
-            _ =>{
-                println!("Not a valid top-level command, please choose from \"construct\",\"predict\",\"analyze\", or \"construct_predict\". Exiting");
-                panic!()
-            }
-        }
-    }
-
-
-}
 //
 // pub fn interpret(literal:&str, arg_iter:&mut std::env::Args) {
 //
@@ -691,16 +656,6 @@ mod manual_testing {
 
     use super::*;
 
-    pub fn test_command_predict_full() {
-        let mut args = vec!["predict", "-m","branching","-b","tree.txt","-tg","tree.0","tree.1","tree.2","-c","counts.txt","-p","3","-o","./elsewhere/","-f","header_backup.txt"].into_iter().map(|x| x.to_string());
-
-        let command = Command::parse(&args.next().unwrap());
-
-        println!("{:?}",command);
-
-        // panic!();
-
-    }
 
 }
 
@@ -709,32 +664,6 @@ pub mod primary_testing {
 
     use super::*;
     use crate::utils::*;
-
-    #[test]
-    fn test_command_trivial() {
-
-        match Command::parse("construct") {
-            Command::Construct => {},
-            _ => panic!("Failed prediction parse")
-        };
-
-        match Command::parse("predict") {
-            Command::Predict => {},
-            _ => panic!("Failed prediction parse")
-        };
-
-        match Command::parse("combined") {
-            Command::Combined => {},
-            _ => panic!("Failed prediction parse")
-        };
-
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_command_wrong() {
-        Command::parse("abc");
-    }
 
     #[test]
     fn test_matrix_flip() {

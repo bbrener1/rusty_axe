@@ -29,26 +29,14 @@ pub struct RankMatrix {
     // Features x Samples, not the usual Samples x Features
     dispersion_mode: DispersionMode,
     norm_mode: NormMode,
-    split_fraction_regularization: f64
+    split_fraction_regularization: f64,
+    standardize: bool,
 }
 
 
 impl RankMatrix {
 
     pub fn new<'a> (counts: Vec<Vec<f64>>, parameters:&Parameters) -> RankMatrix {
-
-        // let mut meta_vector = Vec::new();
-        //
-        // for (i,loc_counts) in counts
-        //     .into_iter()
-        //     .enumerate()
-        //      {
-        //     // if i%200 == 0 {
-        //     //     // println!("Initializing: {}",i);
-        //     // }
-        //     let mut construct = RankVector::<Vec<Node>>::link(loc_counts);
-        //     meta_vector.push(construct);
-        // }
 
         let mut meta_vector: Vec<RankVector<Vec<Node>>> = counts
             .into_par_iter()
@@ -72,6 +60,7 @@ impl RankMatrix {
             norm_mode: parameters.norm_mode,
             dispersion_mode: parameters.dispersion_mode,
             split_fraction_regularization: parameters.split_fraction_regularization as f64,
+            standardize: parameters.standardize,
         };
 
 
@@ -96,6 +85,7 @@ impl RankMatrix {
             norm_mode: NormMode::L1,
             dispersion_mode: DispersionMode::MAD,
             split_fraction_regularization: 1.,
+            standardize: true,
         }
 
     }
@@ -193,8 +183,8 @@ impl RankMatrix {
             dimensions: dimensions,
             norm_mode: self.norm_mode,
             dispersion_mode: self.dispersion_mode,
-            split_fraction_regularization: self.split_fraction_regularization
-
+            split_fraction_regularization: self.split_fraction_regularization,
+            standardize: self.standardize,
         }
 
     }
@@ -258,14 +248,16 @@ impl RankMatrix {
 
         let mut dispersions = &forward_dispersions + &reverse_dispersions;
 
-        for (i,mut feature) in dispersions.axis_iter_mut(Axis(1)).enumerate() {
-            if forward_dispersions[[0,i]] > 0. {
-                feature /= forward_dispersions[[0,i]];
-            }
-            else {
-                feature.fill(1.);
-            };
+        if self.standardize {
+            for (i,mut feature) in dispersions.axis_iter_mut(Axis(1)).enumerate() {
+                if forward_dispersions[[0,i]] > 0. {
+                    feature /= forward_dispersions[[0,i]];
+                }
+                else {
+                    feature.fill(1.);
+                };
 
+            }            
         }
         // println!("{:?}",dispersions);
 
