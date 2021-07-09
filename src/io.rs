@@ -105,7 +105,7 @@ impl Parameters {
 
             averaging_mode: AveragingMode::Arithmetic,
             norm_mode: NormMode::L2,
-            standardize: true,
+            standardize: false,
             weighing_mode: WeighingMode::Flat,
             dispersion_mode: DispersionMode::SSME,
             split_fraction_regularization: 1.,
@@ -191,8 +191,9 @@ impl Parameters {
                 "-n" | "-norm" | "-norm_mode" => {
                     arg_struct.norm_mode = NormMode::read(&args.next().expect("Failed to read norm mode"));
                 },
-                "-std" | "-s" => {
-                    arg_struct.standardize = true;
+                "-std" | "-s" | "-standardize" | "-standardized" => {
+                    arg_struct.standardize = args.next().unwrap().parse::<bool>().expect("Error parsing std argument");
+                    // arg_struct.standardize = true;
                 }
                 "-t" | "-trees" => {
                     arg_struct.tree_limit = args.next().expect("Error processing tree count").parse::<usize>().expect("Error parsing tree count");

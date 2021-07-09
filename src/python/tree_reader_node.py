@@ -203,18 +203,76 @@ class Node:
 
         return residuals
 
+    def explained(self):
+        if self.parent is None:
+            if hasattr(self,'explained_cache'):
+                return self.explained_cache
+            else:
+                additives = self.forest.node_representation(self.nodes(),mode='additive_mean')
+                squared = np.power(additives,2)
+                return np.sum(squared,axis=0)
+        else:
+            return self.root().explained()
+
+
+    def absolute_partials(self):
+        if self.parent is not None:
+            explained = self.explained()
+            own_additive = self.additive_mean_gains()
+            own = np.power(own_additive,2)
+            signed = np.sign(own_additive) * (own/explained)
+            return signed
+        else:
+            return np.zeros(len(self.forest.output_features))
+
     def partials(self):
         if len(self.children) > 1:
-            c1 = self.children[0]
-            c2 = self.children[1]
 
-            c1ss = np.power(self.means() - c1.means(),2) * len(c1.samples())
-            c2ss = np.power(self.means() - c2.means(),2) * len(c2.samples())
-            srs = self.squared_residual_sum()
-            ratios = 1 - ((c1ss + c2ss) / srs)
-            ratios[srs == 0] = 1
-            additive = self.additive_mean_gains()
-            partials = additive * ratios
+            descendants = self.nodes()
+            if self.sister() is not None:
+                descendants.extend(self.sister().nodes())
+
+            additives = self.forest.node_representation(descendants,mode='additive_mean')
+            populations = np.sum(self.forest.node_representation(descendants,mode='sample'),axis=1)
+
+            self_additives = self.additive_mean_gains()
+            self_ads = np.power(self_additives,2) * self.pop()
+            adrs = np.dot(np.power(additives,2).T, populations)
+
+            adrf = self_ads / (self_ads + adrs)
+
+            adrf[~np.isfinite(adrf)] = 0
+
+            partials = np.sign(self_additives) * adrf
+
+            # descendants = self.nodes()
+            # if self.sister() is not None:
+            #     descendants.extend(self.sister().nodes())
+            #
+            # additives = self.forest.node_representation(descendants,mode='additive_mean')
+            # populations = np.sum(self.forest.node_representation(descendants,mode='sample'),axis=1)
+            #
+            # self_additives = self.additive_mean_gains()
+            # self_ads = np.power(self_additives,2) * self.pop()
+            # adrs = np.dot(np.power(additives,2).T, populations)
+            #
+            # adrf = self_ads / (self_ads + adrs)
+            #
+            # adrf[~np.isfinite(adrf)] = 1.
+            #
+            # partials = self_additives * adrf
+
+
+            # c1 = self.children[0]
+            # c2 = self.children[1]
+
+            # c1ss = np.power(self.means() - c1.means(),2) * len(c1.samples())
+            # c2ss = np.power(self.means() - c2.means(),2) * len(c2.samples())
+            # srs = self.squared_residual_sum()
+            # ratios = 1 - ((c1ss + c2ss) / srs)
+            # ratios[srs == 0] = 1
+            # additive = self.additive_mean_gains()
+            # partials = additive * ratios
 
             # c1ss = np.power(self.means() - c1.means(),2) * len(c1.samples())
             # c2ss = np.power(self.means() - c2.means(),2) * len(c2.samples())
@@ -584,6 +642,14 @@ class Node:
         for child in self.children:
             child.trim(limit)
 
+    def trim_population(self,limit):
+
+        if self.coefficient_of_determination() < limit:
+            self.local_samples = self.samples()
+            self.children = []
+
+        for child in self.children:
+            child.trim(limit)
 
     def sorted_node_counts(self):
 
@@ -843,7 +909,6 @@ class Filter:
             return scores > self.split
         else:
             return scores <= self.split
-
 
 class Reduction:
 

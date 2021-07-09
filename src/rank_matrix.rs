@@ -189,22 +189,19 @@ impl RankMatrix {
 
     }
 
-    pub fn order_dispersions(&self,draw_order:&[usize],feature_weights:&Array1<f64>) -> Option<Array1<f64>> {
+    pub fn order_dispersions(&self,draw_order:&[usize],feature_weights:&Array1<f64>) -> Array1<f64> {
         let full_dispersion = self.full_dispersion(draw_order);
 
         let normed = match self.norm_mode {
-            NormMode::L1 => { Some(l1_sum(full_dispersion.as_ref()?,feature_weights))},
-            NormMode::L2 => { Some(l2_sum(full_dispersion.as_ref()?,feature_weights))},
+            NormMode::L1 => { l1_sum(&full_dispersion,feature_weights)},
+            NormMode::L2 => { l2_sum(&full_dispersion,feature_weights)},
         };
 
         normed
     }
 
-    pub fn full_dispersion(&self,draw_order:&[usize]) -> Option<Array2<f64>> {
+    pub fn full_dispersion(&self,draw_order:&[usize]) -> Array2<f64> {
 
-        if draw_order.len() < 3 {
-            return None
-        }
 
         let mut forward_dispersions: Array2<f64> = Array2::zeros((draw_order.len()+1,self.dimensions.0));
         let mut reverse_dispersions: Array2<f64> = Array2::zeros((draw_order.len()+1,self.dimensions.0));
@@ -257,11 +254,11 @@ impl RankMatrix {
                     feature.fill(1.);
                 };
 
-            }            
+            }
         }
         // println!("{:?}",dispersions);
 
-        Some(dispersions)
+        dispersions
 
     }
 
@@ -273,7 +270,16 @@ impl RankMatrix {
 
     pub fn split_input_output(input_matrix:RankMatrix,output_matrix:RankMatrix,parameters:&Parameters) -> Option<(usize,usize,f64)> {
 
+
         let mut draw_orders: Vec<Vec<usize>> = input_matrix.meta_vector.iter().map(|mv| mv.draw_order()).collect();
+
+        // let lsc = parameters.leaf_size_cutoff;
+
+        // for draw_order in draw_orders.iter_mut() {
+        //     draw_order.rotate_left(lsc);
+        //     draw_order.truncate((draw_order.len() - lsc*2).max(0));
+        // }
+
 
         let feature_weights = Array1::<f64>::ones(output_matrix.dimensions.0);
 
@@ -283,15 +289,20 @@ impl RankMatrix {
                 .into_par_iter()
                 .enumerate()
                 .map(|(i,draw_order)| {
-                    let ordered_dispersions = output_matrix.order_dispersions(&draw_order,&feature_weights)?;
+                    let ordered_dispersions = output_matrix.order_dispersions(&draw_order,&feature_weights);
                     let (local_index,dispersion) = ArgMinMax::argmin_v(ordered_dispersions.iter().skip(1))?;
                     Some((i,draw_order[local_index],*dispersion))
                 })
                 .collect();
 
+
+
         // println!("Minima:{:?}",minima);
 
-        let (feature,sample,_) = minima.iter().flat_map(|m| m).min_by(|&a,&b| (a.2).partial_cmp(&b.2).unwrap())?;
+        let (feature,sample,_) =
+            minima.iter()
+            .flat_map(|m| m)
+            .min_by(|&a,&b| (a.2).partial_cmp(&b.2).unwrap())?;
 
         let threshold = input_matrix.feature_fetch(*feature,*sample);
 
@@ -357,7 +368,7 @@ mod rank_matrix_tests {
         let draw_order = mtx.sort_by_feature(0);
 
         let order_dispersions = mtx.order_dispersions(&draw_order,&array![1.,]);
-        assert_eq!(order_dispersions,Some(array![594.0, 460.0, 354.0, 252.0, 130.0, 92.0, 162.0, 364.0, 594.0]));
+        assert_eq!(order_dispersions,array![594.0, 460.0, 354.0, 252.0, 130.0, 92.0, 162.0, 364.0, 594.0]);
     }
 
     #[test]
@@ -370,7 +381,7 @@ mod rank_matrix_tests {
         let draw_order = mtx.sort_by_feature(0);
 
         let order_dispersions = mtx.order_dispersions(&draw_order,&array![1.,]);
-        assert_eq!(order_dispersions,Some(array![594.0, 460.0, 354.0, 252.0, 130.0, 92.0, 162.0, 364.0, 594.0]));
+        assert_eq!(order_dispersions,array![594.0, 460.0, 354.0, 252.0, 130.0, 92.0, 162.0, 364.0, 594.0]);
     }
 
     #[test]

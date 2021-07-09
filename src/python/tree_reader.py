@@ -4,9 +4,11 @@ from tree_reader_prediction import Prediction
 from tree_reader_sample_cluster import SampleCluster
 from tree_reader_node_cluster import NodeCluster
 from tree_reader_tree import Tree
+
 from json import dumps as jsn_dumps
 from os import makedirs
 from shutil import copyfile, rmtree
+
 import re
 import json
 import sys
@@ -15,25 +17,29 @@ import random
 import glob
 import pickle
 from functools import reduce
+from multiprocessing import Pool
+import copy
+from pathlib import Path
+
+import numpy as np
+
 import scipy.special
 from scipy.stats import linregress
 from scipy.spatial.distance import jaccard
 from scipy.spatial.distance import squareform
 from scipy.optimize import nnls
+from scipy.cluster import hierarchy as hrc
+from scipy.spatial.distance import pdist, cdist
+from scipy.cluster.hierarchy import dendrogram, linkage
+
 import sklearn
 from sklearn.decomposition import PCA
 from sklearn.decomposition import KernelPCA
 from sklearn.manifold import TSNE
 from sklearn.decomposition import NMF
-from umap import UMAP
-from scipy.cluster import hierarchy as hrc
-from multiprocessing import Pool
-import copy
-from pathlib import Path
-from scipy.spatial.distance import pdist, cdist
 from sklearn.linear_model import Ridge, Lasso
-from scipy.cluster.hierarchy import dendrogram, linkage
-import numpy as np
+
+from umap import UMAP
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
@@ -193,33 +199,27 @@ class Forest:
             nodes = self.nodes()
 
         if mode == 'gain':
-            print("Gain reduction")
             encoding = self.local_gain_matrix(nodes).T
         elif mode == 'error_ratio':
             encoding = self.error_ratio_matrix(nodes).T
         elif mode == 'additive':
-            print("Additive reduction")
             encoding = self.additive_matrix(nodes).T
         elif mode == 'additive_mean':
-            print("Additive mean reduction")
             encoding = self.mean_additive_matrix(nodes).T
         elif mode == 'sample':
-            print("Sample reduction")
             encoding = self.node_sample_encoding(nodes).T
         elif mode == 'sister':
-            print("Sister reduction")
             encoding = self.node_sister_encoding(nodes).T
         elif mode == 'median' or mode == 'medians':
-            print("Median reduction")
             encoding = self.median_matrix(nodes)
         elif mode == 'mean' or mode == 'means':
-            print("Mean reduction")
             encoding = self.mean_matrix(nodes)
         elif mode == 'factor':
-            print("Factor matrix")
             encoding = self.node_factor_encoding(nodes)
         elif mode == 'partial':
             encoding = self.partial_matrix(nodes)
+        elif mode == 'partial_absolute':
+            encoding = self.partial_absolute(nodes)
         else:
             raise Exception(f"Mode not recognized:{mode}")
 
@@ -355,6 +355,15 @@ class Forest:
             if i%1000 == 0:
                 print(f"Node {i}\r",end='')
             partials[i] = node.partials()
+        print("")
+        return partials
+
+    def partial_absolute(self,nodes):
+        partials = np.zeros((len(nodes),len(self.output_features)))
+        for i, node in enumerate(nodes):
+            if i%1000 == 0:
+                print(f"Node {i}\r",end='')
+            partials[i] = node.absolute_partials()
         print("")
         return partials
 
