@@ -21,3 +21,7 @@ rayon = "1"
 num-traits = "0.2"
 
 ndarray = { version = "0.15", features = ['rayon'] }
+
+[[bin]]
+name = "rf_5"
+path = "rusty_axe/src/main.rs"
