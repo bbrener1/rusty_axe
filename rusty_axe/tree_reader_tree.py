@@ -1,4 +1,4 @@
-from tree_reader_node import Node
+from rusty_axe.tree_reader_node import Node
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl

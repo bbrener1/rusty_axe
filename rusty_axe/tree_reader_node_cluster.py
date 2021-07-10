@@ -1,4 +1,4 @@
-from tree_reader_utils import js_wrap, generate_feature_value_html, generate_cross_reference_table, weighted_correlation
+from rusty_axe.tree_reader_utils import js_wrap, generate_feature_value_html, generate_cross_reference_table, weighted_correlation
 import os
 
 import numpy as np

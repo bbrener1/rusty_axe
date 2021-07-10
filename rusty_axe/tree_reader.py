@@ -1,9 +1,10 @@
-from tree_reader_utils import fast_knn, double_fast_knn, hacked_louvain, generate_feature_value_html,sister_distance
-from tree_reader_node import Node, Reduction, Filter
-from tree_reader_prediction import Prediction
-from tree_reader_sample_cluster import SampleCluster
-from tree_reader_node_cluster import NodeCluster
-from tree_reader_tree import Tree
+
+from rusty_axe.tree_reader_utils import fast_knn, double_fast_knn, hacked_louvain, generate_feature_value_html,sister_distance
+from rusty_axe.tree_reader_node import Node, Reduction, Filter
+from rusty_axe.tree_reader_prediction import Prediction
+from rusty_axe.tree_reader_sample_cluster import SampleCluster
+from rusty_axe.tree_reader_node_cluster import NodeCluster
+from rusty_axe.tree_reader_tree import Tree
 
 from json import dumps as jsn_dumps
 from os import makedirs

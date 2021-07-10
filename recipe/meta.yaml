@@ -7,11 +7,14 @@ source:
   git_depth: 1
 
 requirements:
+  host:
+    - rust
+
   build:
+    - rust
+    - git
 
   run:
-    - git
-    - rust
     - python
     - numpy
     - scipy
