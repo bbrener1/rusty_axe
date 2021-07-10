@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 
-from matplotlib.colors import DivergingNorm
+from matplotlib.colors import TwoSlopeNorm
 
 
 import matplotlib.pyplot as plt
@@ -711,7 +711,7 @@ class NodeCluster:
         plt.title(
             f"Distribution of Samples \nIn {self.name()} (Red) vs Its Sisters (Blue)")
         plt.scatter(forest_coordinates[:, 0], forest_coordinates[:, 1], s=1,
-                    alpha=.6, c=sister_scores, norm=DivergingNorm(0), cmap='bwr')
+                    alpha=.6, c=sister_scores, norm=TwoSlopeNorm(0), cmap='bwr')
         plt.colorbar(label="Sister Score (Difference in Probability)")
         plt.ylabel("tSNE Coordinates (AU)")
         plt.xlabel("tSNE Coordinates (AU)")
@@ -777,7 +777,7 @@ class NodeCluster:
         plt.title(
             f"Distribution of Samples \nIn {self.name()} (Red) vs Its Sisters (Blue)")
         plt.scatter(forest_coordinates[:, 0], forest_coordinates[:, 1], s=1,
-                    alpha=.6, c=sister_scores, norm=DivergingNorm(0), cmap='bwr')
+                    alpha=.6, c=sister_scores, norm=TwoSlopeNorm(0), cmap='bwr')
         plt.colorbar(label="Sister Score (Difference in Probability)")
         plt.ylabel("tSNE Coordinates (AU)")
         plt.xlabel("tSNE Coordinates (AU)")
