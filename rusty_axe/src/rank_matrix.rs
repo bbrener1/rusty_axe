@@ -285,8 +285,8 @@ impl RankMatrix {
 
         let minima: Vec<Option<(usize,usize,f64)>> =
             draw_orders
-                // .into_iter()
-                .into_par_iter()
+                .into_iter()
+                // .into_par_iter()
                 .enumerate()
                 .map(|(i,draw_order)| {
                     let ordered_dispersions = output_matrix.order_dispersions(&draw_order,&feature_weights);
@@ -308,6 +308,40 @@ impl RankMatrix {
 
         Some((*feature,*sample,threshold))
     }
+
+
+    pub fn split_candidates(input_matrix:RankMatrix,output_matrix:RankMatrix,parameters:&Parameters) -> Vec<(usize,usize,f64)> {
+
+
+        let mut draw_orders: Vec<Vec<usize>> = input_matrix.meta_vector.iter().map(|mv| mv.draw_order()).collect();
+
+
+        let feature_weights = Array1::<f64>::ones(output_matrix.dimensions.0);
+
+        let mut minima: Vec<(usize,usize,f64)> =
+            draw_orders
+                .into_iter()
+                .into_par_iter()
+                .enumerate()
+                .flat_map(|(i,draw_order)| {
+                    let ordered_dispersions = output_matrix.order_dispersions(&draw_order,&feature_weights);
+                    let (local_index,dispersion) = ArgMinMax::argmin_v(ordered_dispersions.iter().skip(1))?;
+                    Some((i,draw_order[local_index],*dispersion))
+                })
+                .collect();
+
+
+
+        minima.sort_by(|&a,&b| (a.2).partial_cmp(&b.2).unwrap());
+
+        for (f,s,mut v) in minima.iter_mut() {
+            v = output_matrix.feature_fetch(*f, *s);
+        }
+
+        minima
+    }
+
+
 }
 
 

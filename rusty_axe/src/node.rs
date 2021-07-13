@@ -202,8 +202,84 @@ impl Node {
             prototype.output_ranks.derive_specified(&feature_indices,&sample_indices)
         }
     }
+    //
+    // pub fn local_split(&mut self,prototype:&Prototype,parameters:&Parameters) -> Option<(Filter,Filter)> {
+    //
+    //     // println!("Generating matrices");
+    //
+    //     let input_ranks = self.input_rank_matrix(prototype, parameters);
+    //     let output_ranks = self.output_rank_matrix(prototype, parameters);
+    //
+    //     // println!("Matrices ready,splitting");
+    //
+    //     let (local_feature,local_sample,local_threshold) = RankMatrix::split_input_output(input_ranks,output_ranks,parameters)?;
+    //
+    //     let (left_filter,right_filter) = if parameters.reduce_input {
+    //         let input_features = self.input_features.clone();
+    //
+    //         let Projection {
+    //             weights, means, ..
+    //         } = self.input_projection(prototype,parameters);
+    //
+    //         let left_filter = Filter::new(input_features.clone(),means.row(local_feature).to_vec(),weights.row(local_feature).to_vec(),local_threshold,false);
+    //         let right_filter = Filter::new(input_features,means.row(local_feature).to_vec(),weights.row(local_feature).to_vec(),local_threshold,true);
+    //         (left_filter,right_filter)
+    //     }
+    //     else {
+    //         let left_filter = Filter::new(vec![self.input_features[local_feature].clone(),],vec![0.,],vec![1.,],local_threshold,false);
+    //         let right_filter = Filter::new(vec![self.input_features[local_feature].clone(),],vec![0.,],vec![1.,],local_threshold,true);
+    //         (left_filter,right_filter)
+    //     };
+    //
+    //     Some((left_filter,right_filter))
+    // }
+    //
+    //
+    // pub fn split(&mut self, prototype:&Prototype,parameters:&Parameters) -> Option<&mut [Node]> {
+    //
+    //     if self.depth > parameters.depth_cutoff {
+    //         // println!("Depth exceeded");
+    //         return None
+    //     };
+    //
+    //     if !self.prototype {panic!("Attempted to split on a non-prototype node")};
+    //
+    //     let mut slim_node = self.derive_bootstrap(parameters);
+    //     let opt_f = slim_node.local_split(prototype, parameters);
+    //     if !opt_f.is_some() {
+    //         println!("Failed local");
+    //     }
+    //     let (left_filter,right_filter) = opt_f?;
+    //
+    //     let sample_indices: Vec<usize> = self.samples.iter().map(|s| s.index).collect();
+    //     let local_inputs = prototype.input_array.select(Axis(0),&sample_indices);
+    //     let left_samples: Vec<Sample> = left_filter.filter_matrix(&local_inputs).into_iter().map(|i| self.samples[i].clone()).collect();
+    //     let right_samples: Vec<Sample> = right_filter.filter_matrix(&local_inputs).into_iter().map(|i| self.samples[i].clone()).collect();
+    //
+    //     println!("{:?}",left_filter);
+    //     println!("{:?}",right_filter);
+    //     println!("LL:{},{}",left_samples.len(),right_samples.len());
+    //
+    //     if (left_samples.len() < parameters.leaf_size_cutoff) || (right_samples.len() < parameters.leaf_size_cutoff) {
+    //         // println!("{:?}",left_filter);
+    //         // println!("{:?}",right_filter);
+    //         // println!("LL:{},{}",left_samples.len(),right_samples.len());
+    //         println!("leaf size cutoff");
+    //         println!("++++++++++++++++++");
+    //         return None
+    //     };
+    //
+    //     let mut left_child = self.derive_prototype(left_samples, Some(left_filter));
+    //     let mut right_child = self.derive_prototype(right_samples, Some(right_filter));
+    //
+    //     let children = vec![left_child,right_child];
+    //     self.children = children;
+    //
+    //     Some(&mut self.children)
+    //
+    // }
 
-    pub fn local_split(&mut self,prototype:&Prototype,parameters:&Parameters) -> Option<(Filter,Filter)> {
+    pub fn candidate_filters(&mut self,prototype:&Prototype,parameters:&Parameters) -> Vec<(Filter,Filter)> {
 
         // println!("Generating matrices");
 
@@ -212,27 +288,39 @@ impl Node {
 
         // println!("Matrices ready,splitting");
 
-        let (local_feature,local_sample,local_threshold) = RankMatrix::split_input_output(input_ranks,output_ranks,parameters)?;
+        let minima = RankMatrix::split_candidates(input_ranks,output_ranks,parameters);
 
-        //
-        // println!("Local Split: {},{},{}",local_feature,local_sample,local_threshold);
+        let input_features = self.input_features.clone();
 
-        let (left_filter,right_filter) = if parameters.reduce_input {
-            let input_features = self.input_features.clone();
-            let Projection {
-                weights, means, ..
-            } = self.input_projection(prototype,parameters);
-            let left_filter = Filter::new(input_features.clone(),means.row(local_feature).to_vec(),weights.row(local_feature).to_vec(),local_threshold,false);
-            let right_filter = Filter::new(input_features,means.row(local_feature).to_vec(),weights.row(local_feature).to_vec(),local_threshold,true);
-            (left_filter,right_filter)
+        let filters = if parameters.reduce_input {
+            minima.into_iter()
+            .map(|(local_feature,local_sample,local_threshold)| {
+
+                let Projection {
+                    weights, means, ..
+                } = self.input_projection(prototype,parameters);
+
+                let left_filter = Filter::new(input_features.clone(),means.row(local_feature).to_vec(),weights.row(local_feature).to_vec(),local_threshold,false);
+                let right_filter = Filter::new(input_features.clone(),means.row(local_feature).to_vec(),weights.row(local_feature).to_vec(),local_threshold,true);
+                (left_filter,right_filter)
+            }).collect()
         }
         else {
-            let left_filter = Filter::new(vec![self.input_features[local_feature].clone(),],vec![0.,],vec![1.,],local_threshold,false);
-            let right_filter = Filter::new(vec![self.input_features[local_feature].clone(),],vec![0.,],vec![1.,],local_threshold,true);
-            (left_filter,right_filter)
+            minima.into_iter()
+            .map(|(local_feature,local_sample,local_threshold)| {
+                let left_filter = Filter::new(vec![input_features[local_feature].clone(),],vec![0.,],vec![1.,],local_threshold,false);
+                let right_filter = Filter::new(vec![input_features[local_feature].clone(),],vec![0.,],vec![1.,],local_threshold,true);
+                (left_filter,right_filter)
+            }).collect()
         };
 
-        Some((left_filter,right_filter))
+        filters
+
+    }
+
+    pub fn local_split(&mut self,prototype:&Prototype,parameters:&Parameters) -> Option<(Filter,Filter)> {
+        let candidates = self.candidate_filters(prototype, parameters);
+        candidates.into_iter().rev().next()
     }
 
     pub fn split(&mut self, prototype:&Prototype,parameters:&Parameters) -> Option<&mut [Node]> {
@@ -245,18 +333,26 @@ impl Node {
         if !self.prototype {panic!("Attempted to split on a non-prototype node")};
 
         let mut slim_node = self.derive_bootstrap(parameters);
-        let (left_filter,right_filter) = slim_node.local_split(prototype, parameters)?;
+        let candidate_filters = slim_node.candidate_filters(prototype,parameters);
 
         let sample_indices: Vec<usize> = self.samples.iter().map(|s| s.index).collect();
-        let local_inputs = prototype.input_array.select(Axis(0),&sample_indices);
-        let left_samples: Vec<Sample> = left_filter.filter_matrix(&local_inputs).into_iter().map(|i| self.samples[i].clone()).collect();
-        let right_samples: Vec<Sample> = right_filter.filter_matrix(&local_inputs).into_iter().map(|i| self.samples[i].clone()).collect();
+        let inputs = prototype.input_array.select(Axis(0),&sample_indices);
 
-        if (left_samples.len() < parameters.leaf_size_cutoff) || (right_samples.len() < parameters.leaf_size_cutoff) {
-            // println!("LL:{},{}",left_samples.len(),right_samples.len());
-            // println!("leaf size cutoff");
-            return None
-        };
+        let mut selected_candidates = None;
+
+        for (f_left,f_right) in candidate_filters {
+            let left_samples: Vec<Sample> = f_left.filter_matrix(&inputs).into_iter().map(|i| self.samples[i].clone()).collect();
+            let right_samples: Vec<Sample> = f_right.filter_matrix(&inputs).into_iter().map(|i| self.samples[i].clone()).collect();
+            if left_samples.len() > parameters.leaf_size_cutoff && right_samples.len() > parameters.leaf_size_cutoff {
+                selected_candidates = Some((f_left,f_right));
+                break
+            }
+        }
+
+        let (left_filter,right_filter) = selected_candidates?;
+
+        let left_samples: Vec<Sample> = left_filter.filter_matrix(&inputs).into_iter().map(|i| self.samples[i].clone()).collect();
+        let right_samples: Vec<Sample> = right_filter.filter_matrix(&inputs).into_iter().map(|i| self.samples[i].clone()).collect();
 
         let mut left_child = self.derive_prototype(left_samples, Some(left_filter));
         let mut right_child = self.derive_prototype(right_samples, Some(right_filter));
