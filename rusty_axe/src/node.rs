@@ -397,6 +397,7 @@ mod node_testing {
 
     use super::*;
     use crate::random_forest;
+    use crate::io::NormMode;
     // use ndarray_linalg;
 
     fn iris() -> Array2<f64> {
@@ -568,6 +569,13 @@ mod node_testing {
     #[test]
     fn node_test_iris() {
         let mut parameters = Parameters::empty();
+        // parameters.standardize = true;
+        // parameters.reduce_input = true;
+        // parameters.reduce_output = true;
+        // parameters.reduction = 4;
+        // parameters.norm_mode = NormMode::L1;
+        // parameters.dispersion_mode = DispersionMode::MAD;
+        // parameters.split_fraction_regularization = 1.;
         let mut root = iris_node(&parameters);
         let prototype = iris_prototype();
         let (left,right) = root.local_split(&prototype, &parameters).unwrap();
