@@ -49,9 +49,10 @@ setuptools.setup(
     },
     install_requires=[
         'numpy',
-        'scanpy>1'
-        'python-louvain>.13'
-        'scikit-learn>0.21'
+        'scanpy>1',
+        'python-louvain>0.13',
+        'scikit-learn>0.21',
+        'matplotlib>=3.4.2'
     ],
     python_requires=">=3.6",
 )
