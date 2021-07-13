@@ -392,149 +392,308 @@ impl SerialNode {
 //
 //
 //
-// #[cfg(test)]
-// mod node_testing {
-//
-//     use super::*;
-//     // use ndarray_linalg;
-//
-//     fn blank_parameter() -> Parameters {
-//         let mut parameters = Parameters::empty();
-//         parameters
-//     }
-//
-//     fn blank_counts() -> (Array2<f64>,Array2<f64>) {
-//         (arr_from_vec2(vec![vec![]]),arr_from_vec2(vec![vec![]]))
-//     }
-//
-//     fn blank_node() -> Node {
-//         let (input_counts,output_counts) = blank_counts();
-//         let input_features = &vec![][..];
-//         let output_features = &vec![][..];
-//         let samples = &vec![][..];
-//         let parameters = blank_parameter();
-//         let feature_weight_option = None;
-//         Node::prototype(input_features,output_features,samples,&parameters,feature_weight_option)
-//     }
-//
-//     fn trivial_node() -> Node {
-//         let (input_counts,output_counts) = blank_counts();
-//         let input_features = &vec![Feature::q(&1)][..];
-//         let output_features = &vec![Feature::q(&2)][..];
-//         let samples = &vec![][..];
-//         let parameters = blank_parameter();
-//         let feature_weight_option = None;
-//         Node::prototype(&input_counts,&output_counts,input_features,output_features,samples,&parameters,feature_weight_option)
-//     }
-//
-//     fn simple_node() -> Node {
-//         let input_counts = arr_from_vec2(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]]);
-//         let output_counts = arr_from_vec2(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]]);
-//         let input_features = &vec![Feature::q(&0)][..];
-//         let output_features = &vec![Feature::q(&0)][..];
-//         let samples = &Sample::vec(vec![0,1,2,3,4,5,6,7])[..];
-//         let parameters = blank_parameter();
-//         let feature_weight_option = None;
-//         Node::prototype(&input_counts,&output_counts,input_features,output_features,samples,&parameters,feature_weight_option)
-//     }
-//
-//     #[test]
-//     fn node_test_blank() {
-//         let mut root = blank_node();
-//         root.mads();
-//         root.medians();
-//     }
-//
-//     #[test]
-//     fn node_test_trivial() {
-//         let mut root = trivial_node();
-//         root.mads();
-//         root.medians();
-//     }
-//
-//     //
-//     // #[test]
-//     // fn node_test_dispersions() {
-//     //
-//     //     let mut root = simple_node();
-//     //
-//     //     let split0 = root.feature_index_split(0).unwrap();
-//     //
-//     //     println!("{:?}",root.samples());
-//     //     println!("{:?}",root.output_table.full_values());
-//     //     println!("{:?}",split0);
-//     //
-//     //     // panic!();
-//     // }
-//     //
-//     // #[test]
-//     // fn node_test_subsample() {
-//     //
-//     //     let mut root = simple_node();
-//     //
-//     //
-//     //     for i in 0..1000 {
-//     //         let sub = root.subsample(8, 2, 2);
-//     //         let split_option = sub.rayon_best_split();
-//     //         eprintln!("{:?}",sub.strip_clone());
-//     //         let (draw_order,drop_set) = sub.input_rank_table().sort_by_feature(0);
-//     //         eprintln!("{:?}",(&draw_order,&drop_set));
-//     //         eprintln!("{:?}",sub.output_rank_table().order_dispersions(&draw_order,&drop_set,&sub.feature_weights));
-//     //         eprintln!("{:?}",split_option.unwrap());
-//     //         // if let Some(split) = split_option {
-//     //         //     root.clone().derive_complete_by_split(&split,None);
-//     //         // }
-//     //     }
-//     //
-//     // }
-//
-//
-//     // #[test]
-//     // fn node_test_split() {
-//     //
-//     //     let mut root = simple_node();
-//     //
-//     //     let split = root.rayon_best_split();
-//     //
-//     //     println!("{:?}",split);
-//     //
-//     //     assert_eq!(split.dispersion,2822.265625);
-//     //     assert_eq!(split.value, 5.);
-//     // }
-//     //
-//     // #[test]
-//     // fn node_test_simple() {
-//     //
-//     //     let mut root = simple_node();
-//     //
-//     //     println!("Created node");
-//     //     // root.split_node();
-//     //     let children = root.braid_split_node(8,1,1);
-//     //     root.children = children.unwrap();
-//     //
-//     //     eprintln!("{:?}",root.braids[0]);
-//     //
-//     //     assert_eq!(&root.children[0].sample_names(),&vec!["1".to_string(),"3".to_string(),"4".to_string(),"5".to_string()]);
-//     //     assert_eq!(&root.children[1].sample_names(),&vec!["0".to_string(),"6".to_string(),"7".to_string()]);
-//     //
-//     //     // assert_eq!(root.children[0].samples(),&vec!["1".to_string(),"4".to_string(),"5".to_string()]);
-//     //     // assert_eq!(root.children[1].samples(),&vec!["0".to_string(),"3".to_string(),"6".to_string(),"7".to_string()]);
-//     //
-//     //
-//     //     // assert_eq!(&root.children[0].sample_names(),&vec!["1".to_string(),"2".to_string(),"3".to_string(),"4".to_string(),"5".to_string()]);
-//     //     // assert_eq!(&root.children[1].sample_names(),&vec!["0".to_string(),"2".to_string(),"6".to_string(),"7".to_string()]);
-//     //     //
-//     //     // assert_eq!(&root.children[0].output_table.full_values(),&vec![vec![-3.,0.,5.,-2.,-1.]]);
-//     //     // assert_eq!(&root.children[1].output_table.full_values(),&vec![vec![10.,0.,15.,20.]]);
-//     //
-//     // }
-//     //
-//
-//
-//     #[test]
-//     fn node_test_json() {
-//         let n = simple_node();
-//         let ns = n.to_string();
-//     }
-//
-// }
+#[cfg(test)]
+mod node_testing {
+
+    use super::*;
+    use crate::random_forest;
+    // use ndarray_linalg;
+
+    fn iris() -> Array2<f64> {
+        array![ [5.1,3.5,1.4,0.2],
+          [4.9,3.0,1.4,0.2],
+          [4.7,3.2,1.3,0.2],
+          [4.6,3.1,1.5,0.2],
+          [5.0,3.6,1.4,0.2],
+          [5.4,3.9,1.7,0.4],
+          [4.6,3.4,1.4,0.3],
+          [5.0,3.4,1.5,0.2],
+          [4.4,2.9,1.4,0.2],
+          [4.9,3.1,1.5,0.1],
+          [5.4,3.7,1.5,0.2],
+          [4.8,3.4,1.6,0.2],
+          [4.8,3.0,1.4,0.1],
+          [4.3,3.0,1.1,0.1],
+          [5.8,4.0,1.2,0.2],
+          [5.7,4.4,1.5,0.4],
+          [5.4,3.9,1.3,0.4],
+          [5.1,3.5,1.4,0.3],
+          [5.7,3.8,1.7,0.3],
+          [5.1,3.8,1.5,0.3],
+          [5.4,3.4,1.7,0.2],
+          [5.1,3.7,1.5,0.4],
+          [4.6,3.6,1.0,0.2],
+          [5.1,3.3,1.7,0.5],
+          [4.8,3.4,1.9,0.2],
+          [5.0,3.0,1.6,0.2],
+          [5.0,3.4,1.6,0.4],
+          [5.2,3.5,1.5,0.2],
+          [5.2,3.4,1.4,0.2],
+          [4.7,3.2,1.6,0.2],
+          [4.8,3.1,1.6,0.2],
+          [5.4,3.4,1.5,0.4],
+          [5.2,4.1,1.5,0.1],
+          [5.5,4.2,1.4,0.2],
+          [4.9,3.1,1.5,0.1],
+          [5.0,3.2,1.2,0.2],
+          [5.5,3.5,1.3,0.2],
+          [4.9,3.1,1.5,0.1],
+          [4.4,3.0,1.3,0.2],
+          [5.1,3.4,1.5,0.2],
+          [5.0,3.5,1.3,0.3],
+          [4.5,2.3,1.3,0.3],
+          [4.4,3.2,1.3,0.2],
+          [5.0,3.5,1.6,0.6],
+          [5.1,3.8,1.9,0.4],
+          [4.8,3.0,1.4,0.3],
+          [5.1,3.8,1.6,0.2],
+          [4.6,3.2,1.4,0.2],
+          [5.3,3.7,1.5,0.2],
+          [5.0,3.3,1.4,0.2],
+          [7.0,3.2,4.7,1.4],
+          [6.4,3.2,4.5,1.5],
+          [6.9,3.1,4.9,1.5],
+          [5.5,2.3,4.0,1.3],
+          [6.5,2.8,4.6,1.5],
+          [5.7,2.8,4.5,1.3],
+          [6.3,3.3,4.7,1.6],
+          [4.9,2.4,3.3,1.0],
+          [6.6,2.9,4.6,1.3],
+          [5.2,2.7,3.9,1.4],
+          [5.0,2.0,3.5,1.0],
+          [5.9,3.0,4.2,1.5],
+          [6.0,2.2,4.0,1.0],
+          [6.1,2.9,4.7,1.4],
+          [5.6,2.9,3.6,1.3],
+          [6.7,3.1,4.4,1.4],
+          [5.6,3.0,4.5,1.5],
+          [5.8,2.7,4.1,1.0],
+          [6.2,2.2,4.5,1.5],
+          [5.6,2.5,3.9,1.1],
+          [5.9,3.2,4.8,1.8],
+          [6.1,2.8,4.0,1.3],
+          [6.3,2.5,4.9,1.5],
+          [6.1,2.8,4.7,1.2],
+          [6.4,2.9,4.3,1.3],
+          [6.6,3.0,4.4,1.4],
+          [6.8,2.8,4.8,1.4],
+          [6.7,3.0,5.0,1.7],
+          [6.0,2.9,4.5,1.5],
+          [5.7,2.6,3.5,1.0],
+          [5.5,2.4,3.8,1.1],
+          [5.5,2.4,3.7,1.0],
+          [5.8,2.7,3.9,1.2],
+          [6.0,2.7,5.1,1.6],
+          [5.4,3.0,4.5,1.5],
+          [6.0,3.4,4.5,1.6],
+          [6.7,3.1,4.7,1.5],
+          [6.3,2.3,4.4,1.3],
+          [5.6,3.0,4.1,1.3],
+          [5.5,2.5,4.0,1.3],
+          [5.5,2.6,4.4,1.2],
+          [6.1,3.0,4.6,1.4],
+          [5.8,2.6,4.0,1.2],
+          [5.0,2.3,3.3,1.0],
+          [5.6,2.7,4.2,1.3],
+          [5.7,3.0,4.2,1.2],
+          [5.7,2.9,4.2,1.3],
+          [6.2,2.9,4.3,1.3],
+          [5.1,2.5,3.0,1.1],
+          [5.7,2.8,4.1,1.3],
+          [6.3,3.3,6.0,2.5],
+          [5.8,2.7,5.1,1.9],
+          [7.1,3.0,5.9,2.1],
+          [6.3,2.9,5.6,1.8],
+          [6.5,3.0,5.8,2.2],
+          [7.6,3.0,6.6,2.1],
+          [4.9,2.5,4.5,1.7],
+          [7.3,2.9,6.3,1.8],
+          [6.7,2.5,5.8,1.8],
+          [7.2,3.6,6.1,2.5],
+          [6.5,3.2,5.1,2.0],
+          [6.4,2.7,5.3,1.9],
+          [6.8,3.0,5.5,2.1],
+          [5.7,2.5,5.0,2.0],
+          [5.8,2.8,5.1,2.4],
+          [6.4,3.2,5.3,2.3],
+          [6.5,3.0,5.5,1.8],
+          [7.7,3.8,6.7,2.2],
+          [7.7,2.6,6.9,2.3],
+          [6.0,2.2,5.0,1.5],
+          [6.9,3.2,5.7,2.3],
+          [5.6,2.8,4.9,2.0],
+          [7.7,2.8,6.7,2.0],
+          [6.3,2.7,4.9,1.8],
+          [6.7,3.3,5.7,2.1],
+          [7.2,3.2,6.0,1.8],
+          [6.2,2.8,4.8,1.8],
+          [6.1,3.0,4.9,1.8],
+          [6.4,2.8,5.6,2.1],
+          [7.2,3.0,5.8,1.6],
+          [7.4,2.8,6.1,1.9],
+          [7.9,3.8,6.4,2.0],
+          [6.4,2.8,5.6,2.2],
+          [6.3,2.8,5.1,1.5],
+          [6.1,2.6,5.6,1.4],
+          [7.7,3.0,6.1,2.3],
+          [6.3,3.4,5.6,2.4],
+          [6.4,3.1,5.5,1.8],
+          [6.0,3.0,4.8,1.8],
+          [6.9,3.1,5.4,2.1],
+          [6.7,3.1,5.6,2.4],
+          [6.9,3.1,5.1,2.3],
+          [5.8,2.7,5.1,1.9],
+          [6.8,3.2,5.9,2.3],
+          [6.7,3.3,5.7,2.5],
+          [6.7,3.0,5.2,2.3],
+          [6.3,2.5,5.0,1.9],
+          [6.5,3.0,5.2,2.0],
+          [6.2,3.4,5.4,2.3],
+          [5.9,3.0,5.1,1.8] ]
+    }
+
+    pub fn iris_prototype() -> Prototype {
+
+        let mut parameters = Parameters::empty();
+        Prototype::new(iris(),iris(),&parameters)
+    }
+
+    pub fn iris_node(parameters:&Parameters) -> Node {
+        let input = (0..4).map(|i| Feature::q(&i)).collect::<Vec<Feature>>();
+        let output = (0..4).map(|i| Feature::q(&i)).collect::<Vec<Feature>>();
+        let samples = (0..150).map(|i| Sample::q(&i)).collect::<Vec<Sample>>();
+        Node::prototype(&input, &output, &samples, &parameters)
+    }
+
+    #[test]
+    fn node_test_iris() {
+        let mut parameters = Parameters::empty();
+        let mut root = iris_node(&parameters);
+        let prototype = iris_prototype();
+        let (left,right) = root.local_split(&prototype, &parameters).unwrap();
+        let left_children = left.filter_matrix(&prototype.input_array);
+        let right_children = right.filter_matrix(&prototype.input_array);
+        eprintln!("{:?}",parameters);
+        eprintln!("{:?}",left_children);
+        eprintln!("{:?}",right_children);
+        eprintln!("{:?}",left_children.len());
+        eprintln!("{:?}",right_children.len());
+        panic!();
+    }
+
+
+    // fn trivial_node() -> Node {
+    //     let (input_counts,output_counts) = blank_counts();
+    //     let input_features = &vec![Feature::q(&1)][..];
+    //     let output_features = &vec![Feature::q(&2)][..];
+    //     let samples = &vec![][..];
+    //     let parameters = blank_parameter();
+    //     let feature_weight_option = None;
+    //     Node::prototype(&input_counts,&output_counts,input_features,output_features,samples,&parameters,feature_weight_option)
+    // }
+    //
+    // fn simple_node() -> Node {
+    //     let input_counts = arr_from_vec2(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]]);
+    //     let output_counts = arr_from_vec2(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]]);
+    //     let input_features = &vec![Feature::q(&0)][..];
+    //     let output_features = &vec![Feature::q(&0)][..];
+    //     let samples = &Sample::vec(vec![0,1,2,3,4,5,6,7])[..];
+    //     let parameters = blank_parameter();
+    //     let feature_weight_option = None;
+    //     Node::prototype(&input_counts,&output_counts,input_features,output_features,samples,&parameters,feature_weight_option)
+    // }
+
+    // #[test]
+    // fn node_test_blank() {
+    //     let mut root = blank_node();
+    //     root.mads();
+    //     root.medians();
+    // }
+    //
+    // #[test]
+    // fn node_test_trivial() {
+    //     let mut root = trivial_node();
+    //     root.mads();
+    //     root.medians();
+    // }
+
+    //
+    // #[test]
+    // fn node_test_dispersions() {
+    //
+    //     let mut root = simple_node();
+    //
+    //     let split0 = root.feature_index_split(0).unwrap();
+    //
+    //     println!("{:?}",root.samples());
+    //     println!("{:?}",root.output_table.full_values());
+    //     println!("{:?}",split0);
+    //
+    //     // panic!();
+    // }
+    //
+    // #[test]
+    // fn node_test_subsample() {
+    //
+    //     let mut root = simple_node();
+    //
+    //
+    //     for i in 0..1000 {
+    //         let sub = root.subsample(8, 2, 2);
+    //         let split_option = sub.rayon_best_split();
+    //         eprintln!("{:?}",sub.strip_clone());
+    //         let (draw_order,drop_set) = sub.input_rank_table().sort_by_feature(0);
+    //         eprintln!("{:?}",(&draw_order,&drop_set));
+    //         eprintln!("{:?}",sub.output_rank_table().order_dispersions(&draw_order,&drop_set,&sub.feature_weights));
+    //         eprintln!("{:?}",split_option.unwrap());
+    //         // if let Some(split) = split_option {
+    //         //     root.clone().derive_complete_by_split(&split,None);
+    //         // }
+    //     }
+    //
+    // }
+
+
+    // #[test]
+    // fn node_test_split() {
+    //
+    //     let mut root = simple_node();
+    //
+    //     let split = root.rayon_best_split();
+    //
+    //     println!("{:?}",split);
+    //
+    //     assert_eq!(split.dispersion,2822.265625);
+    //     assert_eq!(split.value, 5.);
+    // }
+    //
+    // #[test]
+    // fn node_test_simple() {
+    //
+    //     let mut root = simple_node();
+    //
+    //     println!("Created node");
+    //     // root.split_node();
+    //     let children = root.braid_split_node(8,1,1);
+    //     root.children = children.unwrap();
+    //
+    //     eprintln!("{:?}",root.braids[0]);
+    //
+    //     assert_eq!(&root.children[0].sample_names(),&vec!["1".to_string(),"3".to_string(),"4".to_string(),"5".to_string()]);
+    //     assert_eq!(&root.children[1].sample_names(),&vec!["0".to_string(),"6".to_string(),"7".to_string()]);
+    //
+    //     // assert_eq!(root.children[0].samples(),&vec!["1".to_string(),"4".to_string(),"5".to_string()]);
+    //     // assert_eq!(root.children[1].samples(),&vec!["0".to_string(),"3".to_string(),"6".to_string(),"7".to_string()]);
+    //
+    //
+    //     // assert_eq!(&root.children[0].sample_names(),&vec!["1".to_string(),"2".to_string(),"3".to_string(),"4".to_string(),"5".to_string()]);
+    //     // assert_eq!(&root.children[1].sample_names(),&vec!["0".to_string(),"2".to_string(),"6".to_string(),"7".to_string()]);
+    //     //
+    //     // assert_eq!(&root.children[0].output_table.full_values(),&vec![vec![-3.,0.,5.,-2.,-1.]]);
+    //     // assert_eq!(&root.children[1].output_table.full_values(),&vec![vec![10.,0.,15.,20.]]);
+    //
+    // }
+    //
+
+
+}

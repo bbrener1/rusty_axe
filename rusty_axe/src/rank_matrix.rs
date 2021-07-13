@@ -614,77 +614,28 @@ mod rank_matrix_tests {
     pub fn rank_matrix_full_ssme() {
         let mut parameters = Parameters::empty();
         parameters.dispersion_mode = DispersionMode::SSME;
+        parameters.standardize = true;
         parameters.split_fraction_regularization = 0.;
         let iris_matrix = RankMatrix::from_array(&iris().t().to_owned(),&parameters);
         let full = iris_matrix.full_dispersion(&(0..150).collect::<Vec<usize>>());
-        eprintln!("{:?}",full);
+        for (i,f) in full.axis_iter(Axis(0)).enumerate() {
+            eprintln!("{:?}",i);
+            eprintln!("{:?}",f);
+        }
         panic!();
     }
 
+    #[test]
+    pub fn rank_matrix_split() {
+        let mut parameters = Parameters::empty();
+        parameters.dispersion_mode = DispersionMode::SSME;
+        parameters.standardize = true;
+        parameters.split_fraction_regularization = 0.;
+        let input = RankMatrix::new(vec![(0..150).map(|x| x as f64).collect::<Vec<f64>>()],&parameters);
+        let iris_matrix = RankMatrix::from_array(&iris().t().to_owned(),&parameters);
+        let split = RankMatrix::split_input_output(input, iris_matrix, &parameters);
+        eprintln!("{:?}",parameters);
+        eprintln!("{:?}",split);
+        panic!();
+    }
 }
-
-
-    //
-    //
-    // pub fn split(input:&Array2<f64>,output:&Array2<f64>,parameters:&Parameters) -> Option<(usize,usize,f64)> {
-    //
-    //     let mut output_vectors: Vec<RankVector<Vec<Node>>> =
-    //         output.axis_iter(Axis(0))
-    //         .into_par_iter()
-    //         .map(|column| {
-    //             RankVector::<Vec<Node>>::link(column.to_vec())
-    //             // println!("O:{:?}",output_vectors.last().unwrap());
-    //         })
-    //         .collect();
-    //
-    //
-    //     let mut draw_orders: Vec<Vec<usize>> =
-    //         input.axis_iter(Axis(0))
-    //         .into_par_iter()
-    //         .map(|column|
-    //         {
-    //             column.argsort().into_iter().map(|(i,_)| i).collect()
-    //         })
-    //         .collect();
-    //
-    //     let mut output_matrix = RankMatrix::from_array(output, parameters);
-    //
-    //     RankMatrix::split_presorted(&draw_orders, output_matrix, parameters)
-    // }
-    //
-    //
-    // pub fn split_presorted(draw_orders:&Vec<Vec<usize>>,mut output_matrix:RankMatrix,parameters:&Parameters) -> Option<(usize,usize,f64)> {
-    //
-    //     let feature_weights = Array1::<f64>::ones(output_matrix.dimensions.0);
-    //
-    //     let minima: Vec<Option<(usize,usize,f64)>> =
-    //         draw_orders
-    //             // .into_iter()
-    //             .into_par_iter()
-    //             .enumerate()
-    //             .map(|(i,draw_order)| {
-    //                 let ordered_dispersions = output_matrix.order_dispersions(&draw_order,&feature_weights)?;
-    //                 let (local_index,dispersion) = ordered_dispersions.argmin_v()?;
-    //                 Some((i,draw_order[local_index],*dispersion))
-    //             })
-    //             .collect();
-    //
-    //     eprintln!("{:?}",minima);
-    //
-    //     let (feature,sample,dispersion) = minima.iter().flat_map(|m| m).min_by(|&a,&b| (a.2).partial_cmp(&b.2).unwrap())?;
-    //
-    //     // let feature_index = minima.iter().map(|m| m.map(|(f,s,d)| d).unwrap_or(std::f64::MAX)).argmin()?;
-    //     // let (feature,sample,dispersion) = minima[feature_index]?;
-    //     let mut initial_dispersion: f64 = 0.;
-    //
-    //     for rv in output_matrix.meta_vector.iter() {
-    //         let dispersion: f64 = rv.dispersion(parameters.dispersion_mode);
-    //         initial_dispersion += dispersion;
-    //     }
-    //
-    //     // println!("Split successful");
-    //     // println!("{}",output_vectors.len());
-    //     let delta_dispersion = initial_dispersion - dispersion;
-    //     Some((*feature,*sample,delta_dispersion))
-    //
-    // }

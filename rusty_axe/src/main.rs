@@ -132,7 +132,7 @@ impl Filter {
             scores.into_iter().enumerate().filter(|(i,s)| *s > self.split).map(|(i,s)| i).collect()
         }
         else {
-            scores.into_iter().enumerate().filter(|(i,s)| *s < self.split).map(|(i,s)| i).collect()
+            scores.into_iter().enumerate().filter(|(i,s)| *s <= self.split).map(|(i,s)| i).collect()
         }
     }
 
