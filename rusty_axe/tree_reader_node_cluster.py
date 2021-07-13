@@ -480,7 +480,7 @@ class NodeCluster:
     def json_cluster_summary(self, n=20, features=None):
 
         # Summarizes the cluster in a json format, primarily for use in html summary documents
-        # then returns the object wrapped in a
+        # then returns the object wrapped in a script
 
         from json import dumps as jsn_dumps
 

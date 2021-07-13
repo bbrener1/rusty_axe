@@ -1646,13 +1646,13 @@ class Forest:
 
     def html_directory(self):
 
-        location = Path(__file__).parent.parent.absolute()
+        location = Path(__file__).parent.absolute()
         location = str(location) + "/html/"
 
         return location
 
     def location(self):
-        return str(Path(__file__).parent.parent.absolute())
+        return str(Path(__file__).parent.absolute())
 
     def html_tree_summary(self, n=3, mode="ud", custom=None, labels=None, features=None, primary=True, cmap='viridis', secondary=True, figsize=(30, 30), output=None):
 
@@ -1664,7 +1664,7 @@ class Forest:
 
         if output is None:
             location = self.location()
-            html_location = location + "/html/"
+            html_location = self.html_directory()
             rmtree(html_location)
             makedirs(html_location)
         else:
