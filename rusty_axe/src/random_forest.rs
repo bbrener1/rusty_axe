@@ -93,7 +93,7 @@ impl Forest {
     pub fn generate(&mut self) -> Result<(),Error> {
 
         let results: Vec<Result<(),Error>> = (0..self.parameters.tree_limit)
-            .into_par_iter()
+            // .into_par_iter()
             .map(|i| {
 
                 println!("Computing tree {}",i);

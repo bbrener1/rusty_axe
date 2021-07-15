@@ -14,6 +14,7 @@ pub struct Projector {
     loadings:Array1<f64>,
     weight_norm: f64,
     smallnum: f64,
+    max_iter:usize,
 }
 
 impl Projector {
@@ -34,13 +35,19 @@ impl Projector {
             loadings,
             weight_norm,
             smallnum,
+            max_iter:10000,
         }
+    }
+
+    pub fn max_iter(mut self, set:usize) -> Projector {
+        self.max_iter = set;
+        self
     }
 
     pub fn calculate_projection(&mut self) -> Option<(Array1<f64>,Array1<f64>,Array1<f64>,Array1<f64>)> {
         self.weights.fill(1.);
         self.loadings.fill(1.);
-        for _ in 0..10000 {
+        for _ in 0..self.max_iter {
         // loop {
             self.weights = self.array.t().dot(&self.loadings);
             let new_norm = (self.weights.iter().map(|x| x.powi(2)).sum::<f64>()).sqrt();
@@ -129,13 +136,24 @@ mod nipals_tests {
     // use test::Bencher;
 
 
-    // #[test]
-    // fn iris_projection() {
-    //     let iris = iris_array();
-    //     let iris_m = &iris - 6.;
-    //     println!("{:?}",iris);
-    //     let projection = Projector::from(iris).calculate_n_projections(4);
-    //     println!("{:?}",projection);
-    //     panic!();
-    // }
+    #[test]
+    fn iris_projection() {
+        let iris = iris_array();
+        let iris_m = &iris - 6.;
+        println!("{:?}",iris);
+        let projection = Projector::from(iris).calculate_n_projections(4);
+        println!("{:?}",projection);
+
+        let answer = array![[ 0.36158968, -0.08226889,  0.85657211,  0.35884393],
+       [ 0.65653988,  0.72971237, -0.1757674 , -0.07470647],
+       [-0.58099728,  0.59641809,  0.07252408,  0.54906091],
+       [ 0.31725455, -0.32409435, -0.47971899,  0.75112056]];
+
+       // The sign of the vectors is sometimes opposite. Check manually, by uncommenting the panic, but this test is oookay.
+       eprintln!("diff: {:?}",&projection.as_ref().unwrap().weights);
+
+       assert!((&projection.unwrap().weights.mapv(|x| x.abs()) - answer).mapv(|x| x.powi(2)).sum() < 0.001);
+
+       panic!()
+    }
 }

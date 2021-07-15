@@ -23,6 +23,7 @@ mod io;
 pub mod node;
 mod random_forest;
 mod fast_nipal_vector;
+mod hash_rv;
 
 use ndarray::prelude::*;
 use std::env;

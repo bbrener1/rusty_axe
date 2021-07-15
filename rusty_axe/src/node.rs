@@ -320,7 +320,7 @@ impl Node {
 
     pub fn local_split(&mut self,prototype:&Prototype,parameters:&Parameters) -> Option<(Filter,Filter)> {
         let candidates = self.candidate_filters(prototype, parameters);
-        candidates.into_iter().rev().next()
+        candidates.get(0).map(|t| t.clone())
     }
 
     pub fn split(&mut self, prototype:&Prototype,parameters:&Parameters) -> Option<&mut [Node]> {
@@ -344,15 +344,11 @@ impl Node {
             let left_samples: Vec<Sample> = f_left.filter_matrix(&inputs).into_iter().map(|i| self.samples[i].clone()).collect();
             let right_samples: Vec<Sample> = f_right.filter_matrix(&inputs).into_iter().map(|i| self.samples[i].clone()).collect();
             if left_samples.len() > parameters.leaf_size_cutoff && right_samples.len() > parameters.leaf_size_cutoff {
-                selected_candidates = Some((f_left,f_right));
-                break
+                selected_candidates = Some((f_left,f_right,left_samples,right_samples));
             }
         }
 
-        let (left_filter,right_filter) = selected_candidates?;
-
-        let left_samples: Vec<Sample> = left_filter.filter_matrix(&inputs).into_iter().map(|i| self.samples[i].clone()).collect();
-        let right_samples: Vec<Sample> = right_filter.filter_matrix(&inputs).into_iter().map(|i| self.samples[i].clone()).collect();
+        let (left_filter,right_filter,left_samples,right_samples) = selected_candidates?;
 
         let mut left_child = self.derive_prototype(left_samples, Some(left_filter));
         let mut right_child = self.derive_prototype(right_samples, Some(right_filter));
@@ -665,16 +661,17 @@ mod node_testing {
     #[test]
     fn node_test_iris() {
         let mut parameters = Parameters::empty();
-        // parameters.standardize = true;
-        // parameters.reduce_input = true;
-        // parameters.reduce_output = true;
-        // parameters.reduction = 4;
-        // parameters.norm_mode = NormMode::L1;
-        // parameters.dispersion_mode = DispersionMode::MAD;
-        // parameters.split_fraction_regularization = 1.;
+        parameters.standardize = true;
+        parameters.reduce_input = true;
+        parameters.reduce_output = true;
+        parameters.reduction = 4;
+        parameters.norm_mode = NormMode::L1;
+        parameters.dispersion_mode = DispersionMode::MAD;
+        parameters.split_fraction_regularization = 1.;
         let mut root = iris_node(&parameters);
         let prototype = iris_prototype();
         let (left,right) = root.local_split(&prototype, &parameters).unwrap();
+        println!("Filters: {:?}", (&left,&right));
         let left_children = left.filter_matrix(&prototype.input_array);
         let right_children = right.filter_matrix(&prototype.input_array);
         eprintln!("{:?}",parameters);
