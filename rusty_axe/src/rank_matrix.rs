@@ -39,8 +39,8 @@ impl RankMatrix {
     pub fn new<'a> (counts: Vec<Vec<f64>>, parameters:&Parameters) -> RankMatrix {
 
         let mut meta_vector: Vec<RankVector<Vec<Node>>> = counts
-            .into_iter()
-            // .into_par_iter()
+            // .into_iter()
+            .into_par_iter()
             .enumerate()
             .map(|(i,loc_counts)|{
                 // if i%200 == 0 {
@@ -197,8 +197,6 @@ impl RankMatrix {
             NormMode::L1 => { full_dispersion.sum_axis(Axis(1))},
             NormMode::L2 => { full_dispersion.mapv_inplace(|x| x.powi(2)); full_dispersion.sum_axis(Axis(1))},
         };
-
-        println!("{:?}",normed);
 
         normed
     }
@@ -378,8 +376,8 @@ impl RankMatrix {
 
         let mut minima: Vec<(usize,usize,f64)> =
             draw_orders
-                .into_iter()
-                // .into_par_iter()
+                // .into_iter()
+                .into_par_iter()
                 .enumerate()
                 .flat_map(|(i,draw_order)| {
                     let ordered_dispersions = output_matrix.order_dispersions(&draw_order);
@@ -395,8 +393,6 @@ impl RankMatrix {
         for triplet in minima.iter_mut() {
             triplet.2 = input_matrix.feature_fetch(triplet.0,triplet.1);
         }
-
-        println!("Minima:{:?}",minima);
 
         minima
     }

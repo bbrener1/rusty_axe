@@ -17,6 +17,7 @@ pub struct RankVector<T> {
     pub rank_order: Option<Vec<usize>>,
     zones: [usize;4],
     sums: [f64;2],
+    squared_sums: [f64;2],
     offset: usize,
     median: (usize,usize),
     left: usize,
@@ -88,6 +89,7 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
 
         let mut zones = [0;4];
         let mut sums = [0.;2];
+        let mut squared_sums = [0.;2];
 
         let mut previous = left;
         let tail_node_index = right;
@@ -110,6 +112,7 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
 
             zones[2] += 1;
             sums[1] += data;
+            squared_sums[1] += data.powi(2);
 
         };
 
@@ -125,6 +128,7 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
             rank_order: Some(rank_order),
             zones: zones,
             sums: sums,
+            squared_sums: squared_sums,
             offset: 2,
             median: median,
             left: left,
@@ -168,9 +172,11 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
 
             if self.nodes[target].rank < self.nodes[self.median.1].rank {
                 self.sums[0] -= self.nodes[target].data;
+                self.squared_sums[0] -= self.nodes[target].data.powi(2);
             }
             if self.nodes[target].rank > self.nodes[self.median.0].rank {
                 self.sums[1] -= self.nodes[target].data;
+                self.squared_sums[1] -= self.nodes[target].data.powi(2);
             }
 
             self.nodes[target].zone = 0;
@@ -204,9 +210,11 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
 
             if self.nodes[target].rank < self.nodes[self.median.1].rank {
                 self.sums[0] -= self.nodes[target].data;
+                self.squared_sums[0] -= self.nodes[target].data.powi(2);
             }
             if self.nodes[target].rank > self.nodes[self.median.0].rank {
                 self.sums[1] -= self.nodes[target].data;
+                self.squared_sums[1] -= self.nodes[target].data.powi(2);
             }
 
             let (_old_median,new_median) = self.recenter_median(target);
@@ -260,7 +268,10 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
                     self.median = (order[m-1],order[m]);
                     let l_sum = order[..m].iter().map(|&i| self.nodes[i].data).sum::<f64>();
                     let r_sum = order[m..].iter().map(|&i| self.nodes[i].data).sum::<f64>();
+                    let l_squared_sum = order[..m].iter().map(|&i| self.nodes[i].data.powi(2)).sum::<f64>();
+                    let r_squared_sum = order[m..].iter().map(|&i| self.nodes[i].data.powi(2)).sum::<f64>();
                     self.sums = [l_sum,r_sum];
+                    self.squared_sums = [l_squared_sum,r_squared_sum];
                     // eprintln!("Establishing median:{:?},{:?}",self.median,self.sums);
                 }
             },
@@ -269,7 +280,10 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
                 self.median = (order[m],order[m]);
                 let l_sum = order[..m].iter().map(|&i| self.nodes[i].data).sum::<f64>();
                 let r_sum = order[(m+1)..].iter().map(|&i| self.nodes[i].data).sum::<f64>();
+                let l_squared_sum = order[..m].iter().map(|&i| self.nodes[i].data.powi(2)).sum::<f64>();
+                let r_squared_sum = order[(m+1)..].iter().map(|&i| self.nodes[i].data.powi(2)).sum::<f64>();
                 self.sums = [l_sum,r_sum];
+                self.squared_sums = [l_squared_sum,r_squared_sum];
                 // eprintln!("Establishing median:{:?},{:?}",self.median,self.sums);
             },
             _ => unreachable!(),
@@ -434,10 +448,12 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
         match self.median.0 == self.median.1 {
             false => {
                 self.sums[0] -= self.nodes[self.median.0].data;
+                self.squared_sums[0] -= self.nodes[self.median.0].data.powi(2);
                 self.median = (self.nodes[self.median.1].previous,self.nodes[self.median.1].previous)
             },
             true => {
                 self.sums[1] += self.nodes[self.median.1].data;
+                self.squared_sums[1] -= self.nodes[self.median.1].data.powi(2);
                 self.median = (self.nodes[self.median.1].previous,self.median.1)
             }
         }
@@ -448,10 +464,12 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
         match self.median.0 == self.median.1 {
             false => {
                 self.sums[1] -= self.nodes[self.median.1].data;
+                self.squared_sums[1] -= self.nodes[self.median.1].data.powi(2);
                 self.median = (self.nodes[self.median.0].next,self.nodes[self.median.0].next)
             },
             true => {
                 self.sums[0] += self.nodes[self.median.0].data;
+                self.squared_sums[0] -= self.nodes[self.median.0].data.powi(2);
                 self.median = (self.median.0,self.nodes[self.median.0].next)
             }
         }
@@ -635,10 +653,11 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
 
     #[inline]
     pub fn ssme(&self) -> f64 {
-        let values = self.ordered_values();
-        let median = self.median();
-        let sum:f64 = values.into_iter().map(|x| (x - median).powi(2)).sum();
-        sum
+        let sums =
+        // let values = self.ordered_values();
+        // let median = self.median();
+        // let sum:f64 = values.into_iter().map(|x| (x - median).powi(2)).sum();
+        // sum
     }
 
     #[inline]

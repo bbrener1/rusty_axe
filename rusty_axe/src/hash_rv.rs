@@ -46,23 +46,59 @@ impl HashRV {
         self.segment_directory.insert(index,3);
     }
 
-    // pub fn shift_left(&mut self) {
-    //     if let Some((index,value)) = self.segments[0].pop_right() {
-    //         self.segments[1].push_left(index,value);
-    //     }
-    //     if let Some((index,value)) = self.segments[2].pop_right() {
-    //         self.segments[3].push_left(index,value);
-    //     }
-    // }
-    //
-    // pub fn shift_right(&mut self) {
-    //     if let Some((index,value)) = self.segments[0].pop_right() {
-    //         self.segments[1].push_left(index,value);
-    //     }
-    //     if let Some((index,value)) = self.segments[2].pop_right() {
-    //         self.segments[3].push_left(index,value);
-    //     }
-    // }
+    pub fn near_left(&self) -> Option<f64> {
+        self.segments[1].left_value()
+    }
+
+    pub fn far_left(&self) -> Option<f64> {
+        self.segments[0].right_value()
+    }
+
+    pub fn near_right(&self) -> Option<f64> {
+        self.segments[2].right_value()
+    }
+
+    pub fn far_right(&self) -> Option<f64> {
+        self.segments[3].left_value()
+    }
+
+    pub fn shift_left(&mut self) -> Option<()> {
+        let (left_index,left_value) = self.segments[0].pop_right()?;
+        let (right_index,right_value) = self.segments[2].pop_right()?;
+
+        self.segments[1].push_left(left_index,left_value);
+        self.segments[3].push_left(right_index,right_value);
+
+        Some(())
+    }
+
+    pub fn shift_right(&mut self) -> Option<()> {
+        let (left_index,left_value) = self.segments[1].pop_left()?;
+        let (right_index,right_value) = self.segments[3].pop_left()?;
+
+        self.segments[0].push_right(left_index,left_value);
+        self.segments[2].push_right(right_index,right_value);
+
+        Some(())
+    }
+
+    pub fn shift_median_left(&mut self) -> Option<()> {
+        let (left_index,left_value) = self.segments[1].pop_right()?;
+        self.segments[2].push_left(left_index,left_value);
+
+        Some(())
+    }
+
+    pub fn shift_median_right(&mut self) -> Option<()> {
+        let (left_index,left_value) = self.segments[1].pop_right()?;
+        self.segments[2].push_left(left_index,left_value);
+
+        Some(())
+    }
+
+    pub fn expand(&mut self) {
+
+    }
 
 }
 
@@ -93,6 +129,14 @@ impl Segment {
             Some(self.linkages[&-2].1 as usize)
         }
         else {None}
+    }
+
+    pub fn left_value(&self) -> Option<f64> {
+        self.left().map(|i| self.arena[&(i as i32)])
+    }
+
+    pub fn right_value(&self) -> Option<f64> {
+        self.right().map(|i| self.arena[&(i as i32)])
     }
 
     pub fn right(&self) -> Option<usize> {
@@ -195,6 +239,7 @@ impl Segment {
         };
 
     }
+
 }
 
 pub struct RRVCrawler<'a> {

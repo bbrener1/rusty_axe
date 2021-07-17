@@ -363,8 +363,8 @@ impl Node {
     pub fn grow(&mut self, prototype:&Prototype, parameters:&Parameters) {
         if let Some(children) = self.split(prototype,parameters) {
             for child in children.iter_mut() {
+                println!("D:{:?}",child.depth);
                 child.grow(prototype,parameters);
-                // println!("D:{:?}",child.depth);
             }
         }
     }

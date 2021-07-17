@@ -571,31 +571,31 @@ class Prediction:
             print("#########################################")
 
             self.compare_factor_means(other,factor_object)
-            #
-            # factor_z,factor_p = self.compare_factor_residuals(other,factor_object)
-            #
-            # print(f"Student's T: Test Statistic = {factor_z}, p = {factor_p}")
-            #
-            # factor_ps.append(factor_p)
-            #
-            # self_fvu,other_fvu = self.compare_factor_fvu(other,factor_object)
-            # fvu_deltas.append(other_fvu - self_fvu)
-            #
+
+            factor_z,factor_p = self.compare_factor_residuals(other,factor_object)
+
+            print(f"Student's T: Test Statistic = {factor_z}, p = {factor_p}")
+
+            factor_ps.append(factor_p)
+
+            self_fvu,other_fvu,mwu = self.compare_factor_fvu(other,factor_object)
+            fvu_deltas.append(other_fvu - self_fvu)
+
             # mwu,symmetric_entropy = self.compare_factor_values(other,factor_object,bins=bins)
-            #
+
             # factor_mwus.append(mwu)
             # factor_symmetric_entropies.append(symmetric_entropy)
-            #
+
             # fraction_mwu = self.compare_factor_fractions(other,factor_object)
 
-        # result = {
-        #     "P values":factor_ps,
-        #     "FVU Deltas":fvu_deltas,
-        #     "Mann-Whitney U":factor_mwus,
-        #     "Symmetric Entropy":factor_symmetric_entropies,
-        # }
+        result = {
+            "P values":factor_ps,
+            "FVU Deltas":fvu_deltas,
+            "Mann-Whitney U":factor_mwus,
+            "Symmetric Entropy":factor_symmetric_entropies,
+        }
 
-        # return result
+        return result
 
     def compare_factor_means(
                 self,
