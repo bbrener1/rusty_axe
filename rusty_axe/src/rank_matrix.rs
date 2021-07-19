@@ -281,19 +281,21 @@ impl RankMatrix {
                 NormMode::L1 => {
                     for (i,draw) in draw_order.iter().enumerate() {
                         worker_vec.pop(*draw);
-                        let regularization = (i as f64 / draw_order.len() as f64).powf(self.split_fraction_regularization);
+                        let regularization = (worker_vec.len() as f64 / draw_order.len() as f64).powf(self.split_fraction_regularization);
                         dispersions[i] += worker_vec.dispersion(self.dispersion_mode) * regularization / standardization;
                     }
                 }
                 NormMode::L2 => {
                     for (i,draw) in draw_order.iter().enumerate() {
                         worker_vec.pop(*draw);
-                        let regularization = (i as f64 / draw_order.len() as f64).powf(self.split_fraction_regularization);
+                        let regularization = (worker_vec.len() as f64 / draw_order.len() as f64).powf(self.split_fraction_regularization);
                         dispersions[i] += (worker_vec.dispersion(self.dispersion_mode) * regularization / standardization).powi(2);
                     }
                 }
             }
         }
+
+        println!("D:{:?}",dispersions);
 
         for (j,v) in self.meta_vector.iter().enumerate().rev() {
             worker_vec.clone_from_prototype(v);
@@ -307,14 +309,14 @@ impl RankMatrix {
                 NormMode::L1 => {
                     for (i,draw) in draw_order.iter().enumerate().rev() {
                         worker_vec.pop(*draw);
-                        let regularization = (1. - (i as f64 / draw_order.len() as f64)).powf(self.split_fraction_regularization);
+                        let regularization = (worker_vec.len() as f64 / draw_order.len() as f64).powf(self.split_fraction_regularization);
                         dispersions[i+1] += worker_vec.dispersion(self.dispersion_mode) * regularization / standardization;
                     }
                 }
                 NormMode::L2 => {
                     for (i,draw) in draw_order.iter().enumerate().rev() {
                         worker_vec.pop(*draw);
-                        let regularization = (1. - (i as f64 / draw_order.len() as f64)).powf(self.split_fraction_regularization);
+                        let regularization = (worker_vec.len() as f64 / draw_order.len() as f64).powf(self.split_fraction_regularization);
                         dispersions[i+1] += (worker_vec.dispersion(self.dispersion_mode) * regularization / standardization).powi(2);
                     }
                 }
@@ -729,9 +731,9 @@ mod rank_matrix_tests {
     #[test]
     pub fn rank_matrix_split() {
         let mut parameters = Parameters::empty();
-        parameters.dispersion_mode = DispersionMode::SSME;
+        parameters.dispersion_mode = DispersionMode::Variance;
         parameters.standardize = true;
-        parameters.split_fraction_regularization = 0.;
+        parameters.split_fraction_regularization = 1.;
         let input = RankMatrix::new(vec![(0..150).map(|x| x as f64).collect::<Vec<f64>>()],&parameters);
         let iris_matrix = RankMatrix::from_array(&iris().t().to_owned(),&parameters);
         let split = RankMatrix::split_input_output(input, iris_matrix, &parameters);

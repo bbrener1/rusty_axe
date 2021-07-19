@@ -656,12 +656,17 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
 
     #[inline]
     pub fn var(&self) -> f64 {
-        let values = self.ordered_values();
-        let len = self.len() as f64;
-        let sum:f64 = values.iter().sum();
-        let mean = sum/len;
-        let deviation_sum:f64 = values.iter().map(|x| (x - mean).powi(2)).sum();
-        deviation_sum/len
+
+        let len = (self.len() + 1) as f64 ;
+        let mean = self.sum() / len;
+        (self.sum_of_squares() / len) - mean.powi(2)
+
+        // let values = self.ordered_values();
+        // let len = self.len() as f64;
+        // let sum:f64 = values.iter().sum();
+        // let mean = sum/len;
+        // let deviation_sum:f64 = values.iter().map(|x| (x - mean).powi(2)).sum();
+        // deviation_sum/len
     }
 
     #[inline]
