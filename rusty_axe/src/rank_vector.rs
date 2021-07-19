@@ -201,12 +201,15 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
         let target_zone = self.nodes[target].zone;
         if target_zone != 0 {
             // eprintln!("Mpop debug:");
+            // eprintln!("Zones:{:?}",self.zones);
             // eprintln!("Values:{:?}",self.ordered_values());
             // eprintln!("Sums:{:?}",self.sums);
             // eprintln!("Target:{:?}",self.nodes[target]);
             // eprintln!("Median:{:?}",self.median);
 
             self.unlink(target);
+            self.zones[target_zone] -= 1;
+            self.zones[0] += 1;
 
             if self.nodes[target].rank < self.nodes[self.median.1].rank {
                 self.sums[0] -= self.nodes[target].data;
@@ -218,6 +221,7 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
             }
 
             let (_old_median,new_median) = self.recenter_median(target);
+
             (new_median,self.nodes[target].data)
         }
         else {
@@ -443,6 +447,25 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
 
     }
 
+    pub fn sum(&self) -> f64 {
+
+         if self.len() %2 == 0 {
+             self.sums[0] + self.sums[1]
+         }
+         else {
+             self.sums[0] + self.sums[1] + self.median()
+         }
+    }
+
+    pub fn sum_of_squares(&self) -> f64 {
+        if self.len() %2 == 0 {
+            self.squared_sums[0] + self.squared_sums[1]
+        }
+        else {
+            self.squared_sums[0] + self.squared_sums[1] + self.median().powi(2)
+        }
+    }
+
     #[inline]
     pub fn shift_median_left(&mut self) {
         match self.median.0 == self.median.1 {
@@ -453,7 +476,7 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
             },
             true => {
                 self.sums[1] += self.nodes[self.median.1].data;
-                self.squared_sums[1] -= self.nodes[self.median.1].data.powi(2);
+                self.squared_sums[1] += self.nodes[self.median.1].data.powi(2);
                 self.median = (self.nodes[self.median.1].previous,self.median.1)
             }
         }
@@ -469,7 +492,7 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
             },
             true => {
                 self.sums[0] += self.nodes[self.median.0].data;
-                self.squared_sums[0] -= self.nodes[self.median.0].data.powi(2);
+                self.squared_sums[0] += self.nodes[self.median.0].data.powi(2);
                 self.median = (self.median.0,self.nodes[self.median.0].next)
             }
         }
@@ -653,7 +676,12 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
 
     #[inline]
     pub fn ssme(&self) -> f64 {
-        let sums =
+        let sum = self.sum();
+        let sum_of_squares = self.sum_of_squares();
+        let median = self.median();
+        let len = self.len() as f64;
+        // println!("Median: {}, Sum: {}, Sum of Squares: {}, Length: {}", median, sum, sum_of_squares, len);
+        (median.powi(2) * len) - (2. * (median * sum)) + sum_of_squares
         // let values = self.ordered_values();
         // let median = self.median();
         // let sum:f64 = values.into_iter().map(|x| (x - median).powi(2)).sum();
@@ -662,12 +690,29 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
 
     #[inline]
     pub fn sme(&self) -> f64 {
-        let values = self.ordered_values();
-        let median = self.median();
-        let sum:f64 = values.into_iter().map(|x| (x - median).abs()).sum();
-        sum
+
+
+        let sig = self.median() * (self.len() / 2) as f64;
+        let left = (sig - self.sums[0]);
+        let right = (self.sums[1] - sig);
+
+        left+right
+
+        // let values = self.ordered_values();
+        // let median = self.median();
+        // let sum:f64 = values.into_iter().map(|x| (x - median).abs()).sum();
+        // sum
     }
 
+    pub fn match_pop(&mut self,index:usize,mode: DispersionMode) -> f64 {
+        match mode {
+            DispersionMode::Variance | DispersionMode::MAD | DispersionMode::SSE | DispersionMode::Entropy => self.pop(index),
+            DispersionMode::SSME | DispersionMode::SME => self.mpop(index).1,
+            DispersionMode::Mixed => panic!("Mixed mode not a valid dispersion for individual trees!"),
+        }
+    }
+
+    #[inline]
     pub fn dispersion(&self,mode: DispersionMode) -> f64 {
         match mode {
             DispersionMode::Variance => self.var(),
@@ -820,47 +865,63 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
 
         let mut ssmes = Vec::with_capacity(draw_order.len());
 
-        let ordered_values = self.ordered_values();
-        let mut total_values = ordered_values.len() as f64;
-
-        let mut running_square_sum: f64 = ordered_values.iter().map(|x| x.powi(2)).sum();
-        let mut running_double_sum: f64 = ordered_values.iter().sum::<f64>() * 2.;
-        let mut running_median = self.median();
-
-        for (i,draw) in draw_order.iter().enumerate() {
-            let new_ssme = running_square_sum - (running_double_sum * running_median) + (total_values * running_median.powi(2));
-            ssmes.push(new_ssme);
-            let (new_median,value) = self.mpop(*draw);
-            running_median = new_median;
-            running_square_sum -= value.powi(2);
-            running_double_sum -= value * 2.;
-            total_values -= 1.;
-        };
+        for draw in draw_order {
+            ssmes.push(self.ssme());
+            self.pop(*draw);
+        }
 
         ssmes
+        //
+        // let mut ssmes = Vec::with_capacity(draw_order.len());
+        //
+        // let ordered_values = self.ordered_values();
+        // let mut total_values = ordered_values.len() as f64;
+        //
+        // let mut running_square_sum: f64 = ordered_values.iter().map(|x| x.powi(2)).sum();
+        // let mut running_double_sum: f64 = ordered_values.iter().sum::<f64>() * 2.;
+        // let mut running_median = self.median();
+        //
+        // for (i,draw) in draw_order.iter().enumerate() {
+        //     let new_ssme = running_square_sum - (running_double_sum * running_median) + (total_values * running_median.powi(2));
+        //     ssmes.push(new_ssme);
+        //     let (new_median,value) = self.mpop(*draw);
+        //     running_median = new_median;
+        //     running_square_sum -= value.powi(2);
+        //     running_double_sum -= value * 2.;
+        //     total_values -= 1.;
+        // };
+        //
+        // ssmes
 
     }
 
     pub fn ordered_sme(&mut self,draw_order: &[usize]) -> Vec<f64> {
 
-        // unimplemented!();
-
         let mut smes = Vec::with_capacity(draw_order.len());
-        let mut total_values = self.len();
 
-        let mut running_median = self.median();
-
-        for (i,draw) in draw_order.iter().enumerate() {
-            let sig = running_median * (total_values / 2) as f64;
-            let left = (sig - self.sums[0]);
-            let right = (self.sums[1] - sig);
-            smes.push(left + right);
-            self.mpop(*draw);
-            running_median = self.median();
-            total_values -= 1;
+        for draw in draw_order {
+            smes.push(self.sme());
+            self.pop(*draw);
         };
 
         smes
+
+        // let mut smes = Vec::with_capacity(draw_order.len());
+        // let mut total_values = self.len();
+        //
+        // let mut running_median = self.median();
+        //
+        // for (i,draw) in draw_order.iter().enumerate() {
+        //     let sig = running_median * (total_values / 2) as f64;
+        //     let left = (sig - self.sums[0]);
+        //     let right = (self.sums[1] - sig);
+        //     smes.push(left + right);
+        //     self.mpop(*draw);
+        //     running_median = self.median();
+        //     total_values -= 1;
+        // };
+        //
+        // smes
 
 
     }
@@ -1078,6 +1139,7 @@ impl RankVector<Vec<Node>> {
 
         let mut new_zones = [0;4];
         let mut new_sums = [0.;2];
+        let mut new_squared_sums = [0.;2];
 
         let mut previous = left;
 
@@ -1100,6 +1162,7 @@ impl RankVector<Vec<Node>> {
             new_nodes[new_index] = new_node;
             new_zones[2] += 1;
             new_sums[1] += data;
+            new_squared_sums[1] += data;
 
             previous = new_index;
 
@@ -1115,6 +1178,7 @@ impl RankVector<Vec<Node>> {
             rank_order: Some(new_rank_order),
             zones: new_zones,
             sums: new_sums,
+            squared_sums: new_squared_sums,
             offset: self.offset,
             median: (4,4),
             nodes: new_nodes,
@@ -1146,6 +1210,7 @@ impl RankVector<Vec<Node>> {
             rank_order: None,
             zones: self.zones,
             sums: self.sums,
+            squared_sums: self.squared_sums,
             offset: self.offset,
             median: self.median,
             left: self.left,
@@ -1195,6 +1260,8 @@ impl RankVector<SmallVec<[Node;1024]>> {
         }
 
         self.zones = prototype.zones.clone();
+        self.sums = prototype.sums;
+        self.squared_sums = prototype.squared_sums;
         self.offset = prototype.offset;
         self.median = prototype.median;
         self.left = prototype.left;
@@ -1329,6 +1396,34 @@ mod rank_vector_tests {
         assert_eq!(vector.ordered_values(),vec![-5.,-5.,-5.,0.,0.,10.,10.,10.,10.,10.]);
         assert_eq!(vector.median(),5.);
         assert_eq!(vector.mad(),5.);
+    }
+
+    #[test]
+    fn rank_vector_test_sums() {
+        let mut vector = RankVector::<Vec<Node>>::link(vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]);
+        println!("{:?}",vector);
+        for i in (0..8) {
+            println!("Popping {}",i);
+
+            // let output = vector.mpop(i);
+            let output = vector.pop(i);
+            println!("Got {},{:?}",i,output);
+
+            println!("{:?}",vector.sums);
+            println!("{:?}",vector.squared_sums);
+
+            let ordered_value_sum: f64 = vector.ordered_values().iter().sum();
+            let computed_sum = vector.sum();
+
+            println!("{:?} vs {:?}", ordered_value_sum,computed_sum);
+            assert!(ordered_value_sum - computed_sum < 0.00000000001);
+
+            let ordered_value_sum_of_squares: f64 = vector.ordered_values().iter().map(|x| x.powi(2)).sum();
+            let computed_sum_of_squares = vector.sum_of_squares();
+
+            println!("{:?} vs {:?}", ordered_value_sum_of_squares,computed_sum_of_squares);
+            assert!(ordered_value_sum_of_squares - computed_sum_of_squares < 0.00000000001);
+        }
     }
 
     #[test]

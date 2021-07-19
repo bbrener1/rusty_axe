@@ -189,83 +189,22 @@ impl RankMatrix {
         }
 
     }
-
-    pub fn order_dispersions(&self,draw_order:&[usize]) -> Array1<f64> {
-        let mut full_dispersion = self.full_dispersion(draw_order);
-
-        let normed = match self.norm_mode {
-            NormMode::L1 => { full_dispersion.sum_axis(Axis(1))},
-            NormMode::L2 => { full_dispersion.mapv_inplace(|x| x.powi(2)); full_dispersion.sum_axis(Axis(1))},
-        };
-
-        normed
-    }
-
-    pub fn full_dispersion(&self,draw_order:&[usize]) -> Array2<f64> {
-
-        let mut forward_dispersions: Array2<f64> = Array2::zeros((draw_order.len()+1,self.dimensions.0));
-        let mut reverse_dispersions: Array2<f64> = Array2::zeros((draw_order.len()+1,self.dimensions.0));
-
-        let mut worker_vec = RankVector::empty_sv();
-
-        for (i,v) in self.meta_vector.iter().enumerate() {
-            worker_vec.clone_from_prototype(v);
-            let fd = worker_vec.ordered_dispersion(draw_order,self.dispersion_mode);
-            for (j,fr) in fd.into_iter().enumerate() {
-                forward_dispersions[(j,i)] = fr;
-            }
-        }
-
-        let mut reverse_draw_order:Vec<usize> = draw_order.to_owned();
-        reverse_draw_order.reverse();
-
-        for (i,v) in self.meta_vector.iter().enumerate() {
-            worker_vec.clone_from_prototype(v);
-            let mut rd = worker_vec.ordered_dispersion(&reverse_draw_order,self.dispersion_mode);
-            for (j,rr) in rd.into_iter().enumerate() {
-                reverse_dispersions[(reverse_draw_order.len() - j,i)] = rr;
-            }
-        }
-        // assert_eq!(draw_order.len(),7);
-        // assert_eq!(forward_dispersions.len(),8);
-        // assert_eq!(reverse_dispersions.len(),8);
-
-        let len = forward_dispersions.dim().0;
-
-        let reverse_regularization = (Array1::<f64>::range(0.,len as f64 ,1.) / len as f64).mapv(|x| x.powf(self.split_fraction_regularization));
-        let forward_regularization = (Array1::<f64>::range(len as f64 ,0.,-1.) / len as f64).mapv(|x| x.powf(self.split_fraction_regularization));
-
-        for mut feature in forward_dispersions.axis_iter_mut(Axis(1)) {
-            feature *= &forward_regularization;
-        }
-
-        for mut feature in reverse_dispersions.axis_iter_mut(Axis(1)) {
-            feature *= &reverse_regularization;
-        }
-
-        let mut dispersions = &forward_dispersions + &reverse_dispersions;
-
-        if self.standardize {
-            for (i,mut feature) in dispersions.axis_iter_mut(Axis(1)).enumerate() {
-                if forward_dispersions[[0,i]] > 0. {
-                    feature /= forward_dispersions[[0,i]];
-                }
-                else {
-                    feature.fill(1.);
-                };
-
-            }
-        }
-        // println!("{:?}",dispersions);
-
-        dispersions
-
-    }
-
     //
-    // pub fn order_dispersions(&self,draw_order:&[usize]) -> Array2<f64> {
+    // pub fn order_dispersions(&self,draw_order:&[usize]) -> Array1<f64> {
+    //     let mut full_dispersion = self.full_dispersion(draw_order);
     //
-    //     let dispersions: Array1<f64> = Array1::zeros(draw_order.len()+1);
+    //     let normed = match self.norm_mode {
+    //         NormMode::L1 => { full_dispersion.sum_axis(Axis(1))},
+    //         NormMode::L2 => { full_dispersion.mapv_inplace(|x| x.powi(2)); full_dispersion.sum_axis(Axis(1))},
+    //     };
+    //
+    //     normed
+    // }
+    //
+    // pub fn full_dispersion(&self,draw_order:&[usize]) -> Array2<f64> {
+    //
+    //     let mut forward_dispersions: Array2<f64> = Array2::zeros((draw_order.len()+1,self.dimensions.0));
+    //     let mut reverse_dispersions: Array2<f64> = Array2::zeros((draw_order.len()+1,self.dimensions.0));
     //
     //     let mut worker_vec = RankVector::empty_sv();
     //
@@ -323,6 +262,71 @@ impl RankMatrix {
     //
     // }
 
+
+    pub fn order_dispersions(&self,draw_order:&[usize]) -> Array1<f64> {
+
+        let mut dispersions: Array1<f64> = Array1::zeros(draw_order.len()+1);
+
+        let mut worker_vec = RankVector::empty_sv();
+
+        for (j,v) in self.meta_vector.iter().enumerate() {
+            worker_vec.clone_from_prototype(v);
+
+            let standardization = if self.standardize {
+                worker_vec.dispersion(self.dispersion_mode)
+            }
+            else {1.0};
+
+            match self.norm_mode {
+                NormMode::L1 => {
+                    for (i,draw) in draw_order.iter().enumerate() {
+                        worker_vec.pop(*draw);
+                        let regularization = (i as f64 / draw_order.len() as f64).powf(self.split_fraction_regularization);
+                        dispersions[i] += worker_vec.dispersion(self.dispersion_mode) * regularization / standardization;
+                    }
+                }
+                NormMode::L2 => {
+                    for (i,draw) in draw_order.iter().enumerate() {
+                        worker_vec.pop(*draw);
+                        let regularization = (i as f64 / draw_order.len() as f64).powf(self.split_fraction_regularization);
+                        dispersions[i] += (worker_vec.dispersion(self.dispersion_mode) * regularization / standardization).powi(2);
+                    }
+                }
+            }
+        }
+
+        for (j,v) in self.meta_vector.iter().enumerate().rev() {
+            worker_vec.clone_from_prototype(v);
+
+            let standardization = if self.standardize {
+                worker_vec.dispersion(self.dispersion_mode)
+            }
+            else {1.0};
+
+            match self.norm_mode {
+                NormMode::L1 => {
+                    for (i,draw) in draw_order.iter().enumerate().rev() {
+                        worker_vec.pop(*draw);
+                        let regularization = (1. - (i as f64 / draw_order.len() as f64)).powf(self.split_fraction_regularization);
+                        dispersions[i+1] += worker_vec.dispersion(self.dispersion_mode) * regularization / standardization;
+                    }
+                }
+                NormMode::L2 => {
+                    for (i,draw) in draw_order.iter().enumerate().rev() {
+                        worker_vec.pop(*draw);
+                        let regularization = (1. - (i as f64 / draw_order.len() as f64)).powf(self.split_fraction_regularization);
+                        dispersions[i+1] += (worker_vec.dispersion(self.dispersion_mode) * regularization / standardization).powi(2);
+                    }
+                }
+            }
+        }
+
+        // println!("{:?}",dispersions);
+
+        dispersions
+
+    }
+
     pub fn split(input:&Array2<f64>,output:&Array2<f64>,parameters:&Parameters) -> Option<(usize,usize,f64)> {
         let input_matrix = RankMatrix::from_array(input, parameters);
         let output_matrix = RankMatrix::from_array(output, parameters);
@@ -349,6 +353,7 @@ impl RankMatrix {
                 .enumerate()
                 .map(|(i,draw_order)| {
                     let ordered_dispersions = output_matrix.order_dispersions(&draw_order,);
+                    println!("{:?}",ordered_dispersions);
                     let (local_index,dispersion) = ArgMinMax::argmin_v(ordered_dispersions.iter().skip(1))?;
                     Some((i,draw_order[local_index],*dispersion))
                 })
@@ -356,7 +361,7 @@ impl RankMatrix {
 
 
 
-        // println!("Minima:{:?}",minima);
+        println!("Minima:{:?}",minima);
 
         let (feature,sample,_) =
             minima.iter()
@@ -710,11 +715,11 @@ mod rank_matrix_tests {
     pub fn rank_matrix_full_ssme() {
         let mut parameters = Parameters::empty();
         parameters.dispersion_mode = DispersionMode::SSME;
-        parameters.standardize = true;
+        parameters.standardize = false;
         parameters.split_fraction_regularization = 0.;
         let iris_matrix = RankMatrix::from_array(&iris().t().to_owned(),&parameters);
-        let full = iris_matrix.full_dispersion(&(0..150).collect::<Vec<usize>>());
-        for (i,f) in full.axis_iter(Axis(0)).enumerate() {
+        let ordered = iris_matrix.order_dispersions(&(0..150).collect::<Vec<usize>>());
+        for (i,f) in ordered.axis_iter(Axis(0)).enumerate() {
             eprintln!("{:?}",i);
             eprintln!("{:?}",f);
         }
