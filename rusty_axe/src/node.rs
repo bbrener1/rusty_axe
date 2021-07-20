@@ -290,6 +290,8 @@ impl Node {
 
         let minima = RankMatrix::split_candidates(input_ranks,output_ranks,parameters);
 
+        println!("{:?}",minima);
+
         let input_features = self.input_features.clone();
 
         let filters = if parameters.reduce_input {

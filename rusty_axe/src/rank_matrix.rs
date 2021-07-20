@@ -273,7 +273,11 @@ impl RankMatrix {
             worker_vec.clone_from_prototype(v);
 
             let standardization = if self.standardize {
-                worker_vec.dispersion(self.dispersion_mode)
+                let raw = worker_vec.dispersion(self.dispersion_mode);
+                if raw.abs() > 0.0000000001 {
+                    raw
+                }
+                else {1.0}
             }
             else {1.0};
 
@@ -295,15 +299,20 @@ impl RankMatrix {
             }
         }
 
-        println!("D:{:?}",dispersions);
+        // println!("D:{:?}",dispersions);
 
         for (j,v) in self.meta_vector.iter().enumerate().rev() {
             worker_vec.clone_from_prototype(v);
 
             let standardization = if self.standardize {
-                worker_vec.dispersion(self.dispersion_mode)
+                let raw = worker_vec.dispersion(self.dispersion_mode);
+                if raw.abs() > 0.0000000001 {
+                    raw
+                }
+                else {1.0}
             }
             else {1.0};
+
 
             match self.norm_mode {
                 NormMode::L1 => {
@@ -323,7 +332,7 @@ impl RankMatrix {
             }
         }
 
-        // println!("{:?}",dispersions);
+        // println!("D:{:?}",dispersions);
 
         dispersions
 
