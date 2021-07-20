@@ -334,11 +334,11 @@ impl Node {
 
         if !self.prototype {panic!("Attempted to split on a non-prototype node")};
 
-        println!("Deriving bootstrap");
+        // println!("Deriving bootstrap");
         let mut slim_node = self.derive_bootstrap(parameters);
-        println!("Deriving candidates");
+        // println!("Deriving candidates");
         let candidate_filters = slim_node.candidate_filters(prototype,parameters);
-        println!("Filtering");
+        // println!("Filtering");
         let sample_indices: Vec<usize> = self.samples.iter().map(|s| s.index).collect();
         let inputs = prototype.input_array.select(Axis(0),&sample_indices);
 
