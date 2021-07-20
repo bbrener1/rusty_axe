@@ -46,7 +46,40 @@ impl RankMatrix {
                 // if i%200 == 0 {
                 //     // println!("Initializing: {}",i);
                 // }
-                RankVector::<Vec<Node>>::link(loc_counts)
+                RankVector::<Vec<Node>>::link(&loc_counts)
+        }).collect();
+
+        let dim = (meta_vector.len(),meta_vector.get(0).map(|x| x.raw_len()).unwrap_or(0));
+
+        // println!("Made rank table with {} features, {} samples:", dim.0,dim.1);
+
+        let rm = RankMatrix {
+            meta_vector:meta_vector,
+
+            dimensions:dim,
+
+            norm_mode: parameters.norm_mode,
+            dispersion_mode: parameters.dispersion_mode,
+            split_fraction_regularization: parameters.split_fraction_regularization as f64,
+            standardize: parameters.standardize,
+        };
+
+
+        rm 
+
+    }
+
+    pub fn from_array(counts: &Array2<f64>,parameters:&Parameters) -> RankMatrix {
+
+        let mut meta_vector: Vec<RankVector<Vec<Node>>> = counts.axis_iter(Axis(0))
+            // .into_iter()
+            .into_par_iter()
+            .enumerate()
+            .map(|(i,loc_counts)|{
+                // if i%200 == 0 {
+                //     // println!("Initializing: {}",i);
+                // }
+                RankVector::<Vec<Node>>::link_array(loc_counts)
         }).collect();
 
         let dim = (meta_vector.len(),meta_vector.get(0).map(|x| x.raw_len()).unwrap_or(0));
@@ -66,11 +99,6 @@ impl RankMatrix {
 
 
         rm
-
-    }
-
-    pub fn from_array(counts: &Array2<f64>,parameters:&Parameters) -> RankMatrix {
-        RankMatrix::new(vec2_from_arr(counts),parameters)
     }
 
     pub fn to_array(&self) -> Array2<f64> {

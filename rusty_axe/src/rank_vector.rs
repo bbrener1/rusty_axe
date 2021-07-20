@@ -8,7 +8,7 @@ use std::ops::IndexMut;
 use std::fmt::Debug;
 use std::clone::Clone;
 use std::borrow::{Borrow,BorrowMut};
-use ndarray::Array1;
+use ndarray::prelude::*;
 use crate::utils::{slow_sme,slow_ssme,slow_mad,slow_median,argsort,ArgSort,ArgSortII};
 use crate::io::DispersionMode;
 
@@ -51,16 +51,22 @@ impl Node {
 impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut<usize,Output=Node> + Clone + Debug> RankVector<T> {
 
     pub fn empty() -> RankVector<Vec<Node>> {
-        RankVector::<Vec<Node>>::link(vec![])
+        RankVector::<Vec<Node>>::link(&vec![])
     }
 
-    pub fn link(in_vec: Vec<f64>) -> RankVector<Vec<Node>> {
-        let argsorted:Vec<(usize,f64)> = in_vec.argsort();
+    pub fn link_array(in_arr: ArrayView1<f64>) -> RankVector<Vec<Node>> {
+        let argsorted:Vec<(usize,&f64)> = in_arr.argsort();
         RankVector::<Vec<Node>>::link_sorted(argsorted)
 
     }
 
-    pub fn link_sorted(argsorted: Vec<(usize,f64)>) -> RankVector<Vec<Node>> {
+    pub fn link(in_vec: &[f64]) -> RankVector<Vec<Node>> {
+        let argsorted:Vec<(usize,&f64)> = in_vec.argsort();
+        RankVector::<Vec<Node>>::link_sorted(argsorted)
+
+    }
+
+    pub fn link_sorted(argsorted: Vec<(usize,&f64)>) -> RankVector<Vec<Node>> {
         // This method accepts argsorted vectors of f64s only. It does not check integrity!
         // Use at own risk.
 
@@ -99,7 +105,7 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
 
             let node = &mut vector[index];
 
-            node.data = data;
+            node.data = *data;
             node.index = index;
             node.previous = previous;
             node.next = tail_node_index;
@@ -1246,7 +1252,7 @@ impl RankVector<SmallVec<[Node;1024]>> {
 
         let container = SmallVec::new();
 
-        let empty = RankVector::<Vec<Node>>::link(vec![]);
+        let empty = RankVector::<Vec<Node>>::link(&vec![]);
 
         let mut output = empty.clone_to_container(container);
 
@@ -1379,12 +1385,12 @@ mod rank_vector_tests {
 
     #[test]
     fn rank_vector_create_trivial() {
-        let mut vector = RankVector::<Vec<Node>>::link(vec![]);
+        let mut vector = RankVector::<Vec<Node>>::link(&vec![]);
     }
 
     #[test]
     fn rank_vector_create_simple() {
-        let mut vector = RankVector::<Vec<Node>>::link(vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]);
+        let mut vector = RankVector::<Vec<Node>>::link(&vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]);
         println!("{:?}",vector);
         assert_eq!(vector.ordered_values(),vec![-3.,-2.,-1.,0.,5.,10.,15.,20.]);
         assert_eq!(vector.median(),slow_median(vector.ordered_values()));
@@ -1396,7 +1402,7 @@ mod rank_vector_tests {
 
     #[test]
     fn rank_vector_create_repetitive() {
-        let mut vector = RankVector::<Vec<Node>>::link(vec![0.,0.,-5.,-5.,-5.,10.,10.,10.,10.,10.]);
+        let mut vector = RankVector::<Vec<Node>>::link(&vec![0.,0.,-5.,-5.,-5.,10.,10.,10.,10.,10.]);
         println!("{:?}",vector);
         assert_eq!(vector.ordered_values(),vec![-5.,-5.,-5.,0.,0.,10.,10.,10.,10.,10.]);
         assert_eq!(vector.median(),5.);
@@ -1405,7 +1411,7 @@ mod rank_vector_tests {
 
     #[test]
     fn rank_vector_test_sums() {
-        let mut vector = RankVector::<Vec<Node>>::link(vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]);
+        let mut vector = RankVector::<Vec<Node>>::link(&vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]);
         println!("{:?}",vector);
         for i in (0..8) {
             println!("Popping {}",i);
@@ -1433,7 +1439,7 @@ mod rank_vector_tests {
 
     #[test]
     fn rank_vector_sequential_mad_simple() {
-        let mut vector = RankVector::<Vec<Node>>::link(vec![10.,-3.,0.,5.,-2.,-1.,15.,20.],);
+        let mut vector = RankVector::<Vec<Node>>::link(&vec![10.,-3.,0.,5.,-2.,-1.,15.,20.],);
         let mut vm = vector.clone();
 
 
@@ -1455,7 +1461,7 @@ mod rank_vector_tests {
 
     #[test]
     fn rank_vector_sequential_var_simple() {
-        let mut vector = RankVector::<Vec<Node>>::link(vec![10.,-3.,0.,5.,-2.,-1.,15.,20.],);
+        let mut vector = RankVector::<Vec<Node>>::link(&vec![10.,-3.,0.,5.,-2.,-1.,15.,20.],);
 
         let mut vm = vector.clone();
 
@@ -1478,7 +1484,7 @@ mod rank_vector_tests {
 
     #[test]
     fn rank_vector_sequential_sme_simple() {
-        let mut vector = RankVector::<Vec<Node>>::link(vec![10.,-3.,0.,5.,-2.,-1.,15.,20.],);
+        let mut vector = RankVector::<Vec<Node>>::link(&vec![10.,-3.,0.,5.,-2.,-1.,15.,20.],);
         let draw_order = vector.draw_order();
         let mut vm = vector.clone();
         let ordered_sme = vector.clone().ordered_sme(&draw_order);
@@ -1496,7 +1502,7 @@ mod rank_vector_tests {
 
     #[test]
     fn rank_vector_sequential_ssme_simple() {
-        let mut vector = RankVector::<Vec<Node>>::link(vec![10.,-3.,0.,5.,-2.,-1.,15.,20.],);
+        let mut vector = RankVector::<Vec<Node>>::link(&vec![10.,-3.,0.,5.,-2.,-1.,15.,20.],);
         let draw_order = vector.draw_order();
         let mut vm = vector.clone();
         let ordered_ssme = vector.clone().ordered_ssme(&draw_order);
@@ -1513,7 +1519,7 @@ mod rank_vector_tests {
 
     #[test]
     fn rank_vector_derive_test() {
-        let mut vector = RankVector::<Vec<Node>>::link(vec![10.,-3.,0.,5.,-2.,-1.,15.,20.],);
+        let mut vector = RankVector::<Vec<Node>>::link(&vec![10.,-3.,0.,5.,-2.,-1.,15.,20.],);
         let kid1 = vector.derive(&vec![0,3,6,7]);
         let kid2 = vector.derive(&vec![1,4,5]);
         eprintln!("{:?}",kid1);
@@ -1526,7 +1532,7 @@ mod rank_vector_tests {
 
     #[test]
     fn rank_vector_derive_double() {
-        let mut vector = RankVector::<Vec<Node>>::link(vec![10.,-3.,0.,5.,-2.,-1.,15.,20.],);
+        let mut vector = RankVector::<Vec<Node>>::link(&vec![10.,-3.,0.,5.,-2.,-1.,15.,20.],);
         let kid1 = vector.derive(&vec![0,0,3,3,6,7]);
         let kid2 = vector.derive(&vec![1,4,5]);
         eprintln!("{:?}",kid1);
@@ -1719,7 +1725,7 @@ mod rank_vector_tests {
 
     #[test]
     fn rank_vector_fetch_test() {
-        let mut vector = RankVector::<Vec<Node>>::link(vec![10.,-3.,0.,5.,-2.,-1.,15.,20.],);
+        let mut vector = RankVector::<Vec<Node>>::link(&vec![10.,-3.,0.,5.,-2.,-1.,15.,20.],);
         assert_eq!(vector.fetch(0),10.);
         assert_eq!(vector.fetch(1),-3.);
         assert_eq!(vector.fetch(2),0.);

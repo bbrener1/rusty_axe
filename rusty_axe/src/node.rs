@@ -290,7 +290,7 @@ impl Node {
 
         let minima = RankMatrix::split_candidates(input_ranks,output_ranks,parameters);
 
-        println!("{:?}",minima);
+        // println!("{:?}",minima);
 
         let input_features = self.input_features.clone();
 
@@ -365,7 +365,7 @@ impl Node {
     pub fn grow(&mut self, prototype:&Prototype, parameters:&Parameters) {
         if let Some(children) = self.split(prototype,parameters) {
             for child in children.iter_mut() {
-                println!("D:{:?}",child.depth);
+                // println!("D:{:?}",child.depth);
                 child.grow(prototype,parameters);
             }
         }
