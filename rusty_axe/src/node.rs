@@ -327,16 +327,18 @@ impl Node {
 
     pub fn split(&mut self, prototype:&Prototype,parameters:&Parameters) -> Option<&mut [Node]> {
 
-        if self.depth > parameters.depth_cutoff {
+        if self.depth >= parameters.depth_cutoff {
             // println!("Depth exceeded");
             return None
         };
 
         if !self.prototype {panic!("Attempted to split on a non-prototype node")};
 
+        println!("Deriving bootstrap");
         let mut slim_node = self.derive_bootstrap(parameters);
+        println!("Deriving candidates");
         let candidate_filters = slim_node.candidate_filters(prototype,parameters);
-
+        println!("Filtering");
         let sample_indices: Vec<usize> = self.samples.iter().map(|s| s.index).collect();
         let inputs = prototype.input_array.select(Axis(0),&sample_indices);
 
@@ -347,6 +349,7 @@ impl Node {
             let right_samples: Vec<Sample> = f_right.filter_matrix(&inputs).into_iter().map(|i| self.samples[i].clone()).collect();
             if left_samples.len() > parameters.leaf_size_cutoff && right_samples.len() > parameters.leaf_size_cutoff {
                 selected_candidates = Some((f_left,f_right,left_samples,right_samples));
+                break
             }
         }
 
