@@ -28,7 +28,7 @@ def ssme(mtx, axis=None):
 
 
 def hacked_louvain(knn, resolution=1):
-    import louvain
+    import leidenalg as louvain
     import igraph as ig
     from sklearn.neighbors import NearestNeighbors
 
