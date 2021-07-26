@@ -22,7 +22,7 @@ import numpy as np
 # import matplotlib.pyplot as plt
 
 RUST_PATH = str((Path(__file__).parent /
-                    "../target/release/rf_5").resolve())
+                    "../bin/rf_5").resolve())
 
 def main(location, input, output=None, ifh=None, ofh=None, **kwargs):
     # print("Tree reader?")

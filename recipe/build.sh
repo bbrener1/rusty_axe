@@ -1,10 +1,6 @@
 #!/bin/bash
+# This is the conda build script. It calls out to the script that would be
+# used by the setuptools install process and alerts it to the location
+# of the library. 
 
-cargo build --release
-
-if [[ -f ./target/release/rf_5 ]];
-then
-  cp ./target/release/rf_5 .
-else
-  exit 1
-fi
+py_build.sh $PREFIX

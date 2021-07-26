@@ -1080,8 +1080,6 @@ impl<T: Borrow<[Node]> + BorrowMut<[Node]> + Index<usize,Output=Node> + IndexMut
 
     pub fn check_integrity(&self) {
 
-
-
         if (self.mad() - slow_mad(self.ordered_values())).abs() > 0.00001 {
             println!("{:?}", self.nodes);
             println!("{:?}", self.ordered_values());

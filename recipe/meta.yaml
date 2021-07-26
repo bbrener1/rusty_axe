@@ -27,4 +27,3 @@ requirements:
     - python-igraph
     - leidenalg
     - scanpy
-    - louvain
