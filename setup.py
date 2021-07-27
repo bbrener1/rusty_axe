@@ -1,7 +1,7 @@
 import setuptools
 from pathlib import Path
 from setuptools.command.install import install
-from subprocess import check_call
+from subprocess import check_call,run
 from distutils.core import Extension
 
 class PostInstallCommand(install):
@@ -9,9 +9,9 @@ class PostInstallCommand(install):
     def run(self):
         path = str((Path(__file__).parent).resolve())
         print(f"Building binary at {path}")
-        check_call('pwd'.split())
-        check_call('ls'.split())
-        check_call(["bash", "./recipe/py_build.sh",path])
+        run(["bash", "./recipe/py_build.sh",path],check=True)
+        # run('ls'.split(),check=True)
+        # raise Exception()
         install.run(self)
 
 
@@ -40,15 +40,18 @@ with open("README.md", "r", encoding="utf-8") as fh:
         ],
         packages=['rusty_axe'],
         package_dir={
-            "rusty_axe": "rusty_axe",
+            "rusty_axe": "./rusty_axe",
         },
         # include_package_data=True,
         # package_data={
-        #     "rusty_axe":["src/*.rs",]
+        #     "rusty_axe":["./rusty_axe/src/*.rs","./bin/"]
         # },
-        package_data={
-            "rusty_axe":["./bin/*",]
-        },
+        # package_data={
+        #     "rusty_axe":["./bin/*","rusty_axe/src/*.rs"]
+        # },
+        data_files=[
+            ('bin',['./bin/rf_5',]),
+        ],
         cmdclass={
             'install': PostInstallCommand,
         },

@@ -1,1 +1,1 @@
-include ./recipe/* ./Cargo.toml rf_5
+include ./recipe/* ./Cargo.toml ./bin/rf_5 ./rusty_axe/src/*.rs ./rusty_axe/*.py
