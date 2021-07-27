@@ -1,1 +1,3 @@
-include ./recipe/* ./Cargo.toml ./bin/rf_5 ./rusty_axe/src/*.rs ./rusty_axe/*.py
+include ./rusty_axe/*.py
+include ./rusty_axe/figures/*.ipynb
+include ./rusty_axe/bin/*

@@ -1,18 +1,22 @@
 import setuptools
 from pathlib import Path
-from setuptools.command.install import install
+from setuptools.command.build_py import build_py
 from subprocess import check_call,run
 from distutils.core import Extension
 
-class PostInstallCommand(install):
-    """Post-installation for installation mode."""
+# Borrowed from
+# https://stackoverflow.com/questions/20288711/post-install-script-with-python-setuptools
+# and modified. Thanks mertyldiran
+
+class PreProcessing(build_py):
+    """Pre-installation binary compilation."""
     def run(self):
         path = str((Path(__file__).parent).resolve())
         print(f"Building binary at {path}")
         run(["bash", "./recipe/py_build.sh",path],check=True)
         # run('ls'.split(),check=True)
         # raise Exception()
-        install.run(self)
+        build_py.run(self)
 
 
 with open("README.md", "r", encoding="utf-8") as fh:
@@ -42,18 +46,13 @@ with open("README.md", "r", encoding="utf-8") as fh:
         package_dir={
             "rusty_axe": "./rusty_axe",
         },
-        # include_package_data=True,
-        # package_data={
-        #     "rusty_axe":["./rusty_axe/src/*.rs","./bin/"]
-        # },
-        # package_data={
-        #     "rusty_axe":["./bin/*","rusty_axe/src/*.rs"]
-        # },
-        data_files=[
-            ('bin',['./bin/rf_5',]),
-        ],
+        include_package_data=True,
+        package_data={
+            'figures':["figures/*.ipynb",],
+            'bin':["bin/*",]
+        },
         cmdclass={
-            'install': PostInstallCommand,
+            'build_py' : PreProcessing,
         },
         install_requires=[
             'scanpy',
