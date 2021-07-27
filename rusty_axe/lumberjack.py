@@ -21,8 +21,10 @@ import rusty_axe.tree_reader as tr
 import numpy as np
 # import matplotlib.pyplot as plt
 
-RUST_PATH = str((Path(__file__).parent /
-                    "rf_5").resolve())
+RUST_PATH = "rf_5"
+
+# RUST_PATH = str((Path(__file__).parent /
+#                     "rf_5").resolve())
 
 def main(location, input, output=None, ifh=None, ofh=None, **kwargs):
     # print("Tree reader?")
