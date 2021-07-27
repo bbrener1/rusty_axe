@@ -1,5 +1,5 @@
 import setuptools
-import inspect
+from pathlib import Path
 from setuptools.command.install import install
 from subprocess import check_call
 from distutils.core import Extension
@@ -7,12 +7,11 @@ from distutils.core import Extension
 class PostInstallCommand(install):
     """Post-installation for installation mode."""
     def run(self):
-        import rusty_axe
-        path = inspect.getfile(rusty_axe)
-        print(path)
+        path = str((Path(__file__).parent).resolve())
+        print(f"Building binary at {path}")
         check_call('pwd'.split())
         check_call('ls'.split())
-        check_call(["bash", "./recipe/py_build.sh".split())
+        check_call(["bash", "./recipe/py_build.sh",path])
         install.run(self)
 
 
@@ -44,18 +43,20 @@ with open("README.md", "r", encoding="utf-8") as fh:
             "rusty_axe": "rusty_axe",
         },
         # include_package_data=True,
+        # package_data={
+        #     "rusty_axe":["src/*.rs",]
+        # },
         package_data={
-            "rusty_axe":["src/*.rs","build.sh"]
+            "rusty_axe":["./bin/*",]
         },
         cmdclass={
             'install': PostInstallCommand,
         },
         install_requires=[
-            'numpy',
-            'scanpy>1',
-            'python-louvain>0.13',
-            'scikit-learn>0.21',
+            'scanpy',
+            'leidenalg',
+            'scikit-learn',
             'matplotlib>=3.4.2'
         ],
-        python_requires=">=3.6",
+        python_requires="<3.9",
     )

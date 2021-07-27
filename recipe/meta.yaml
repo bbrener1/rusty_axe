@@ -15,15 +15,10 @@ requirements:
     - git
 
   run:
-    - python
-    - numpy
-    - scipy
-    - matplotlib
-    - seaborn
+    - python <=3.8
+    - matplotlib >=3.4.2
     - scikit-learn
     - statsmodels
-    - numba
-    - pytables
     - python-igraph
     - leidenalg
     - scanpy
