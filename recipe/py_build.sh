@@ -3,7 +3,6 @@
 # the source and copy the binary to the appropriate location.
 
 mkdir $1/rusty_axe/bin
-mkdir $1/bin
 
 cargo build --release
 

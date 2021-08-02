@@ -878,7 +878,7 @@ class Forest:
 
         return ordered_features, ordered_coefficients
 
-    def interpret_splits(self, override=False, mode='additive_mean', metric='cosine', pca=100, relatives=True, resolution=1, k=5, depth=6, **kwargs):
+    def interpret_splits(self, override=False, mode='partial', metric='cosine', pca=100, relatives=True, resolution=1, k=10, depth=6, **kwargs):
 
         if pca > len(self.output_features):
             print(
@@ -894,18 +894,18 @@ class Forest:
 
         if relatives:
 
-            print("Relativistic distance (heh)")
+            # print("Relativistic distance (heh)")
 
             own_representation = self.node_representation(
                 nodes[stem_mask], mode=mode, pca=pca)
             sister_representation = self.node_representation(
                 [n.sister() for n in nodes[stem_mask]], mode=mode, pca=pca)
 
-            print("Representations:")
-            print(own_representation.shape)
-            print(sister_representation.shape)
+            # print("Representations:")
+            # print(own_representation.shape)
+            # print(sister_representation.shape)
 
-            print("Running double knn")
+            # print("Running double knn")
             knn = double_fast_knn(own_representation,
                                   sister_representation, k=k, metric=metric, **kwargs)
 
@@ -913,10 +913,10 @@ class Forest:
             representation = self.node_representation(
                 nodes[stem_mask], mode=mode, pca=pca)
 
-            print("Running knn")
+            # print("Running knn")
             knn = fast_knn(representation, k=k, metric=metric, **kwargs)
 
-        print("Calling clustering procedure")
+        # print("Calling clustering procedure")
         labels[stem_mask] = 1 + hacked_louvain(knn, resolution=resolution)
 
         for node, label in zip(nodes, labels):
@@ -934,6 +934,7 @@ class Forest:
         # split_order = dendrogram(linkage(reduction,metric='cos',method='average'),no_plot=True)['leaves']
 
         self.split_clusters = clusters
+        self.factors = self.split_clusters
 
         return labels
 

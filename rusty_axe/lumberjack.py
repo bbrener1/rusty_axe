@@ -76,7 +76,7 @@ def save_trees(location, input_counts, output_counts=None, ifh=None, ofh=None, h
     return inner_fit(input_counts, output_counts, location, ifh=(location + "tmp.ifh"), ofh=(location + "tmp.ofh"), lrg_mem=lrg_mem, **kwargs)
 
 
-def fit(input_counts, output_counts=None, ifh=None, ofh=None, header=None, backtrace=False, lrg_mem=None, location=None, **kwargs):
+def fit(input_counts, cache = True, output_counts=None, ifh=None, ofh=None, header=None, backtrace=False, lrg_mem=None, location=None, **kwargs):
 
     if output_counts is None:
         output_counts = input_counts
@@ -109,6 +109,8 @@ def fit(input_counts, output_counts=None, ifh=None, ofh=None, header=None, backt
 
     forest = tr.Forest.load_from_rust(location, prefix="tmp", ifh="tmp.ifh", ofh="tmp.ofh",
                                       clusters="tmp.clusters", input="input.counts", output="output.counts")
+
+    forest.set_cache = cache
 
     forest.arguments = arguments
 
