@@ -204,14 +204,15 @@ class Node:
 
             adrf = self_ads / (self_ads + adrs)
 
-            adrf[~np.isfinite(adrf)] = 0
+            if not np.isfinite(adrf):
+                adrf = 0
 
             partial = np.sign(self_additive) * adrf
 
 
             return partial
         else:
-            return self.additive_mean_gains()
+            return self.feature_additive_mean(feature)
 
 
     def mean_residuals(self):

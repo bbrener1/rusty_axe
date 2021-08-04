@@ -307,16 +307,37 @@ class NodeCluster:
         return np.mean([n.feature_additive(feature) for n in self.nodes])
 
     def feature_mean_additive(self, feature):
-        return np.mean([n.feature_mean_additive(feature) for n in self.nodes])
+        return np.mean([n.feature_additive_mean(feature) for n in self.nodes])
 
-    def feature_means(self, features):
+    # Alias
+    def feature_conditional_gain(self, feature):
+        return self.feature_mean_additive(feature)
+
+# Multiplied versions of everything above
+
+    def feature_means(self, features=None):
+        if features is None:
+            features = self.forest.output_features
         return np.array([self.feature_mean(feature) for feature in features])
 
-    def feature_additives(self, features):
+    def feature_partials(self, features=None):
+        if features is None:
+            features = self.forest.output_features
+        return np.array([self.feature_partial(feature) for feature in features])
+
+    def feature_additives(self, features=None):
+        if features is None:
+            features = self.forest.output_features
         return np.array([self.feature_additive(feature) for feature in features])
 
-    def feature_mean_additives(self, features):
+    def feature_mean_additives(self, features=None):
+        if features is None:
+            features = self.forest.output_features
         return np.array([self.feature_mean_additive(feature) for feature in features])
+
+    # Alias
+    def feature_conditional_gains(self, features=None):
+        return self.feature_mean_additives(features=features)
 
     def mean_level(self):
         return np.mean([n.level for n in self.nodes])

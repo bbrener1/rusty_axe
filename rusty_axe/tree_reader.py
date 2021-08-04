@@ -205,7 +205,7 @@ class Forest:
             encoding = self.error_ratio_matrix(nodes).T
         elif mode == 'additive':
             encoding = self.additive_matrix(nodes).T
-        elif mode == 'additive_mean':
+        elif mode == 'additive_mean' or mode == 'conditional_gain':
             encoding = self.mean_additive_matrix(nodes).T
         elif mode == 'sample':
             encoding = self.node_sample_encoding(nodes).T
@@ -331,6 +331,9 @@ class Forest:
         for i, node in enumerate(nodes):
             gains[:, i] = node.additive_mean_gains()
         return gains
+
+    def conditional_gain_matrix(self,nodes):
+        return self.mean_additive_matrix(nodes)
 
     def mean_matrix(self, nodes):
         predictions = np.zeros((len(nodes), len(self.output_features)))
@@ -1183,7 +1186,7 @@ class Forest:
             coordinates = np.zeros((len(self.split_clusters), len(features)))
             for i, split_cluster in enumerate(self.split_clusters):
                 for j, feature in enumerate(features):
-                    coordinates[i, j] = split_cluster.feature_mean_additive(
+                    coordinates[i, j] = split_cluster.feature_partial(
                         feature)
         return coordinates
 
@@ -1214,21 +1217,6 @@ class Forest:
             for i, split_cluster in enumerate(self.split_clusters):
                 for j, feature in enumerate(features):
                     coordinates[i, j] = split_cluster.feature_mean(feature)
-        return coordinates
-
-    def factor_domain_mean_matrix(self, features=None):
-        if features is None:
-            coordinates = np.zeros(
-                (len(self.split_clusters), len(self.output_features)))
-            for i, split_cluster in enumerate(self.split_clusters):
-                coordinates[i] = np.mean(self.mean_matrix(
-                    split_cluster.nodes + split_cluster.sisters()), axis=0)
-        else:
-            coordinates = np.zeros((len(self.split_clusters), len(features)))
-            for i, split_cluster in enumerate(self.split_clusters):
-                for j, feature in enumerate(features):
-                    coordinates[i, j] = self.forest.nodes_mean_predict_feature(
-                        split_cluster.nodes + split_cluster.sisters())
         return coordinates
 
     def tsne(self, no_plot=False, pca=100, override=False, **kwargs):
