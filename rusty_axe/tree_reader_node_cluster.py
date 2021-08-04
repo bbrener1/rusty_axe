@@ -297,14 +297,17 @@ class NodeCluster:
 # Mean/summary methods (describe cluster contents)
 ################################################################################
 
+    def feature_partial(self, feature):
+        return np.mean([n.feature_partial(feature) for n in self.nodes])
+
     def feature_mean(self, feature):
-        return np.mean(self.forest.nodes_mean_predict_feature(self.nodes, feature))
+        return np.mean([n.feature_mean(feature) for n in self.nodes])
 
     def feature_additive(self, feature):
         return np.mean([n.feature_additive(feature) for n in self.nodes])
 
     def feature_mean_additive(self, feature):
-        return np.mean(self.forest.nodes_mean_additive_predict_feature(self.nodes, feature))
+        return np.mean([n.feature_mean_additive(feature) for n in self.nodes])
 
     def feature_means(self, features):
         return np.array([self.feature_mean(feature) for feature in features])

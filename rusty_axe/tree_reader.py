@@ -1171,7 +1171,23 @@ class Forest:
                 coordinates[i, j] = sample_cluster.feature_mean(feature)
         return coordinates
 
-    def split_cluster_feature_matrix(self, features=None):
+
+    def factor_partial_matrix(self, features=None):
+        if features is None:
+            coordinates = np.zeros(
+                (len(self.split_clusters), len(self.output_features)))
+            for i, split_cluster in enumerate(self.split_clusters):
+                coordinates[i] = np.mean(
+                    self.partial_matrix(split_cluster.nodes), axis=1)
+        else:
+            coordinates = np.zeros((len(self.split_clusters), len(features)))
+            for i, split_cluster in enumerate(self.split_clusters):
+                for j, feature in enumerate(features):
+                    coordinates[i, j] = split_cluster.feature_mean_additive(
+                        feature)
+        return coordinates
+
+    def factor_feature_matrix(self, features=None):
         if features is None:
             coordinates = np.zeros(
                 (len(self.split_clusters), len(self.output_features)))
@@ -1186,7 +1202,7 @@ class Forest:
                         feature)
         return coordinates
 
-    def split_cluster_mean_matrix(self, features=None):
+    def factor_mean_matrix(self, features=None):
         if features is None:
             coordinates = np.zeros(
                 (len(self.split_clusters), len(self.output_features)))
@@ -1200,7 +1216,7 @@ class Forest:
                     coordinates[i, j] = split_cluster.feature_mean(feature)
         return coordinates
 
-    def split_cluster_domain_mean_matrix(self, features=None):
+    def factor_domain_mean_matrix(self, features=None):
         if features is None:
             coordinates = np.zeros(
                 (len(self.split_clusters), len(self.output_features)))

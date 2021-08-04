@@ -187,6 +187,33 @@ class Node:
             values = self.forest.output[self.sample_mask()].T[fi]
             return np.mean(values)
 
+
+    def feature_partial(self,feature):
+        if len(self.children) > 1:
+
+            descendants = self.nodes()
+            if self.sister() is not None:
+                descendants.extend(self.sister().nodes())
+
+            additives = [n.feature_additive_mean(feature) for n in descendants]
+            populations = [n.pop() for n in descendants]
+
+            self_additive = self.feature_additive_mean(feature)
+            self_ads = np.power(self_additive,2) * self.pop()
+            adrs = np.dot(np.power(additives,2).T, populations)
+
+            adrf = self_ads / (self_ads + adrs)
+
+            adrf[~np.isfinite(adrf)] = 0
+
+            partial = np.sign(self_additive) * adrf
+
+
+            return partial
+        else:
+            return self.additive_mean_gains()
+
+
     def mean_residuals(self):
 
         counts = self.node_counts()
@@ -245,45 +272,6 @@ class Node:
 
             partials = np.sign(self_additives) * adrf
 
-            # descendants = self.nodes()
-            # if self.sister() is not None:
-            #     descendants.extend(self.sister().nodes())
-            #
-            # additives = self.forest.node_representation(descendants,mode='additive_mean')
-            # populations = np.sum(self.forest.node_representation(descendants,mode='sample'),axis=1)
-            #
-            # self_additives = self.additive_mean_gains()
-            # self_ads = np.power(self_additives,2) * self.pop()
-            # adrs = np.dot(np.power(additives,2).T, populations)
-            #
-            # adrf = self_ads / (self_ads + adrs)
-            #
-            # adrf[~np.isfinite(adrf)] = 1.
-            #
-            # partials = self_additives * adrf
-
-
-            # c1 = self.children[0]
-            # c2 = self.children[1]
-
-            # c1ss = np.power(self.means() - c1.means(),2) * len(c1.samples())
-            # c2ss = np.power(self.means() - c2.means(),2) * len(c2.samples())
-            # srs = self.squared_residual_sum()
-            # ratios = 1 - ((c1ss + c2ss) / srs)
-            # ratios[srs == 0] = 1
-            # additive = self.additive_mean_gains()
-            # partials = additive * ratios
-
-            # c1ss = np.power(self.means() - c1.means(),2) * len(c1.samples())
-            # c2ss = np.power(self.means() - c2.means(),2) * len(c2.samples())
-            # c1rs = np.sum(np.power(c1.mean_residuals(),2),axis=0)
-            # c2rs = np.sum(np.power(c2.mean_residuals(),2),axis=0)
-            #
-            # ratios = (c1ss + c2ss) / (c1rs + c1rs + c1ss + c2ss)
-            #
-            # additive = self.additive_mean_gains()
-            #
-            # partials = additive * ratios
 
             return partials
         else:

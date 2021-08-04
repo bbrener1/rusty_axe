@@ -75,6 +75,9 @@ def save_trees(location, input_counts, output_counts=None, ifh=None, ofh=None, h
 
     return inner_fit(input_counts, output_counts, location, ifh=(location + "tmp.ifh"), ofh=(location + "tmp.ofh"), lrg_mem=lrg_mem, **kwargs)
 
+def load(location):
+    # Alias to the tree reader load
+    return tr.Forest.load(location)
 
 def fit(input_counts, cache = True, output_counts=None, ifh=None, ofh=None, header=None, backtrace=False, lrg_mem=None, location=None, **kwargs):
 
@@ -95,11 +98,11 @@ def fit(input_counts, cache = True, output_counts=None, ifh=None, ofh=None, head
     arguments = save_trees(tmp_dir.name + "/", input_counts=input_counts, output_counts=output_counts,
                            ifh=ifh, ofh=ofh, header=header, lrg_mem=lrg_mem, **kwargs)
 
-    print("CHECK TRUTH")
-    print(tmp_dir.name)
-    print(os.listdir(tmp_dir.name))
-
-    print("Generating trees")
+    # print("CHECK TRUTH")
+    # print(tmp_dir.name)
+    # print(os.listdir(tmp_dir.name))
+    #
+    # print("Generating trees")
 
     # inner_fit(input_counts,output_counts,location,ifh=location + 'tmp.ifh',ofh=location + 'tmp.ofh',backtrace=backtrace,**kwargs)
     # ihmm_fit(location)
@@ -110,7 +113,7 @@ def fit(input_counts, cache = True, output_counts=None, ifh=None, ofh=None, head
     forest = tr.Forest.load_from_rust(location, prefix="tmp", ifh="tmp.ifh", ofh="tmp.ofh",
                                       clusters="tmp.clusters", input="input.counts", output="output.counts")
 
-    forest.set_cache = cache
+    forest.set_cache(cache)
 
     forest.arguments = arguments
 
