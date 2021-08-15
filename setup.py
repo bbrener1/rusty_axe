@@ -3,6 +3,8 @@ from pathlib import Path
 from setuptools.command.build_py import build_py
 from subprocess import check_call,run
 from distutils.core import Extension
+import os
+import stat
 
 # Borrowed from
 # https://stackoverflow.com/questions/20288711/post-install-script-with-python-setuptools
@@ -13,7 +15,11 @@ class PreProcessing(build_py):
     def run(self):
         path = str((Path(__file__).parent).resolve())
         print(f"Building binary at {path}")
-        run(["bash", "./recipe/py_build.sh",path],check=True)
+        os.mkdir(path + "/rusty_axe/bin")
+        run(["cargo","build","--release"])
+        os.rename(path + "/target/release/rf_5",path + "/rusty_axe/bin/rf_5")
+        os.chmod(path+"rusty_axe/bin/rf_5",stat.S_IXUSR)
+        # run(["bash", "./recipe/py_build.sh",path],check=True)
         # run('ls'.split(),check=True)
         # raise Exception()
         build_py.run(self)
