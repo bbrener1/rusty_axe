@@ -15,13 +15,12 @@ class PreProcessing(build_py):
     def run(self):
         path = str((Path(__file__).parent).resolve())
         print(f"Building binary at {path}")
-        os.mkdir(path + "/rusty_axe/bin")
+        bin_path = os.path.join(path,"rusty_axe","bin")
+        compile_path = os.path.join(path,"target","release","rf_5")
+        # os.mkdir(path + "/rusty_axe/bin")
         run(["cargo","build","--release"])
-        os.rename(path + "/target/release/rf_5",path + "/rusty_axe/bin/rf_5")
+        os.rename(compile_path,bin_path)
         os.chmod(path+"rusty_axe/bin/rf_5",stat.S_IXUSR)
-        # run(["bash", "./recipe/py_build.sh",path],check=True)
-        # run('ls'.split(),check=True)
-        # raise Exception()
         build_py.run(self)
 
 
