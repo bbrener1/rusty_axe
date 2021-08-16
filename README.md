@@ -34,4 +34,4 @@ Alternatively, if you wish to clone this repo,
 
 executed while in the repo directory should also do the trick. 
 
-A conda installer is forthcoming, as is a pypi upload. 
+A conda installer is forthcoming
