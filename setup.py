@@ -17,7 +17,7 @@ class PreProcessing(build_py):
         try:
             run("cargo")
         except:
-            Exception("CARGO NOT DETECTED. PLEASE INSTALL RUST BEFORE INSTALLING THIS PACKAGE")
+            Exception("CARGO NOT DETECTED. PLEASE INSTALL RUST BEFORE INSTALLING THIS PACKAGE. Available via curl 'https://sh.rustup.rs -sSf | sh -s -- -y'")
             # os.system("curl https://sh.rustup.rs -sSf | sh -s -- -y")
         path = str((Path(__file__).parent).resolve())
         src_path = os.path.join(path,"rusty_axe","src")
@@ -30,8 +30,8 @@ class PreProcessing(build_py):
             os.mkdir(bin_dir_path)
         except FileExistsError:
             pass
-        os.system("cargo build --release")
-        # run(["cargo","build","--release"])
+        # os.system("$HOME/.cargo/bin/cargo build --release")
+        run(["cargo","build","--release"])
         os.replace(compile_path,bin_path)
         os.chmod(bin_path,stat.S_IRWXU)
         shutil.rmtree(src_path)
@@ -43,7 +43,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
     setuptools.setup(
         name="rusty-axe-bbrener1",
-        version="0.62",
+        version="0.63",
         author="Boris Brenerman",
         author_email="bbrener1@jhu.edu",
         description="Random Forest Latent Structure (Biology)",
