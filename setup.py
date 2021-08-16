@@ -21,7 +21,7 @@ class PreProcessing(build_py):
         os.mkdir(bin_dir_path)
         run(["cargo","build","--release"])
         os.rename(compile_path,bin_path)
-        os.chmod(bin_path,stat.S_IXUSR)
+        os.chmod(bin_path,stat.S_IRWXU)
         build_py.run(self)
 
 
