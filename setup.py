@@ -21,7 +21,7 @@ class PreProcessing(build_py):
         os.mkdir(bin_dir_path)
         run(["cargo","build","--release"])
         os.rename(compile_path,bin_path)
-        os.chmod(path+"rusty_axe/bin/rf_5",stat.S_IXUSR)
+        # os.chmod(path+"rusty_axe/bin/rf_5",stat.S_IXUSR)
         build_py.run(self)
 
 
