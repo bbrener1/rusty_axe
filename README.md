@@ -10,7 +10,7 @@ This package is currently intended to be run on linux or osx. This package may f
 
 ## Installation
 
-Please note, before installing you will need python <= 3.8 (this is due to a compatibility issue with statsmodels in pypi and a fix is forthcoming) and a rust compiler in the environment in which you wish to install. 
+Please note, before instlling this package you should obtain the rust compiler. 
 
 A rust compiler can be obtained and silently installed by executing 
 
@@ -22,11 +22,9 @@ If you wish to alter any aspect of the rust compiler defaults, you can execute
 
 or simply check the current recommendations at https://www.rust-lang.org/tools/install
 
-Installation is currently by 
+Install simply by invoking 
 
-`pip install rusty_axe_bbrener1.tar.gz`
-
-of the sdist tarball file located in this repo under /dist. 
+`pip install rusty_axe_bbrener1`
 
 Alternatively, if you wish to clone this repo, 
 
