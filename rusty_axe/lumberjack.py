@@ -21,8 +21,9 @@ import rusty_axe.tree_reader as tr
 import numpy as np
 # import matplotlib.pyplot as plt
 
+bin_path = os.path.join("bin","rf_5")
 RUST_PATH = str((Path(__file__).parent /
-                    "./bin/rf_5").resolve())
+                    bin_path).resolve())
 
 def main(location, input, output=None, ifh=None, ofh=None, **kwargs):
     # print("Tree reader?")
