@@ -17,7 +17,10 @@ class PreProcessing(build_py):
         try:
             run("cargo")
         except:
-            Exception("CARGO NOT DETECTED. PLEASE INSTALL RUST BEFORE INSTALLING THIS PACKAGE. Available via curl 'https://sh.rustup.rs -sSf | sh -s -- -y'")
+            print("###############################################################################")
+            print("CARGO NOT DETECTED. PLEASE INSTALL RUST BEFORE INSTALLING THIS PACKAGE. Available via curl 'https://sh.rustup.rs -sSf | sh -s -- -y'")
+            print("###############################################################################")
+            Exception()
             # os.system("curl https://sh.rustup.rs -sSf | sh -s -- -y")
         path = str((Path(__file__).parent).resolve())
         src_path = os.path.join(path,"rusty_axe","src")
