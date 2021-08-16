@@ -24,7 +24,7 @@ or simply check the current recommendations at https://www.rust-lang.org/tools/i
 
 Installation is currently by 
 
-`pip -install rusty_axe_bbrener1.tar.gz`
+`pip install rusty_axe_bbrener1.tar.gz`
 
 of the sdist tarball file located in this repo under /dist. 
 
