@@ -10,7 +10,7 @@ This package is currently intended to be run on linux or osx. This package may f
 
 ## Installation
 
-Please note, before installing you will need a rust compiler in the environment in which you wish to install. 
+Please note, before installing you will need python <= 3.8 (this is due to a compatibility issue with statsmodels in pypi and a fix is forthcoming) and a rust compiler in the environment in which you wish to install. 
 
 A rust compiler can be obtained and silently installed by executing 
 
