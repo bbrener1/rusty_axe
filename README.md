@@ -10,4 +10,6 @@ It is currently intended to be run on linux or osx, but can limp on windows.
 
 Installation is currently by pip -install of the sdist file located in this repo under /dist. 
 
+Alternatively, if you wish to clone this repo, python setup.py should also do the trick. 
+
 A conda installer is forthcoming, as is a pypi upload. 
