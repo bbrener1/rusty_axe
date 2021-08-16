@@ -15,14 +15,10 @@ class PreProcessing(build_py):
     """Pre-installation binary compilation."""
     def run(self):
         try:
-            run("rustc")
-        except: 
-            print("Rust not detected. We'd like to download and install the rust tool suite with the default settings.")
-            c = input("That ok? y/n")
-            if c == "y":
-                run("curl https://sh.rustup.rs -sSf | sh -s -- -y")
-            else:
-                raise Exception("Aborting, please install rust/cargo")
+            run("cargo")
+        except:
+            Exception("CARGO NOT DETECTED. PLEASE INSTALL RUST BEFORE INSTALLING THIS PACKAGE")
+            # os.system("curl https://sh.rustup.rs -sSf | sh -s -- -y")
         path = str((Path(__file__).parent).resolve())
         src_path = os.path.join(path,"rusty_axe","src")
         bin_dir_path = os.path.join(path,"rusty_axe","bin")
@@ -34,7 +30,8 @@ class PreProcessing(build_py):
             os.mkdir(bin_dir_path)
         except FileExistsError:
             pass
-        run(["cargo","build","--release"])
+        os.system("cargo build --release")
+        # run(["cargo","build","--release"])
         os.replace(compile_path,bin_path)
         os.chmod(bin_path,stat.S_IRWXU)
         shutil.rmtree(src_path)
@@ -46,7 +43,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
     setuptools.setup(
         name="rusty-axe-bbrener1",
-        version="0.61",
+        version="0.62",
         author="Boris Brenerman",
         author_email="bbrener1@jhu.edu",
         description="Random Forest Latent Structure (Biology)",
