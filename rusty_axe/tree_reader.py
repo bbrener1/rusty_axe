@@ -14,6 +14,7 @@ import re
 import json
 import sys
 import os
+import tempfile as tmp
 import random
 import glob
 import pickle
@@ -1668,6 +1669,8 @@ class Forest:
             n = max(int(self.output.shape[1] / 2), 1)
 
         if output is None:
+            # tmp_dir = tmp.TemporaryDirectory()
+            # html_location = location = tmp_dir.name + "/"
             location = self.location()
             html_location = self.html_directory()
             rmtree(html_location)
@@ -1678,7 +1681,7 @@ class Forest:
 
         for split_cluster in self.split_clusters:
             print(f"Summarizing:{split_cluster.name()}")
-            split_cluster.html_cluster_summary(n=n, plot=False, output=output)
+            split_cluster.html_cluster_summary(n=n, plot=False, output=html_location+str(split_cluster.id)+"/")
 
         copyfile(location + "/tree_template.html",
                  html_location + "tree_template.html")
@@ -1853,7 +1856,10 @@ class Forest:
                 html_report.write(cluster_summary_html)
 
         from subprocess import run
-        run(["open", html_location + "tree_template.html"])
+        try:
+            run(["open", html_location + "tree_template.html"])
+        except:
+            print(f"Stored the html report at {html_location}, but could not open from command line")
 
     def split_cluster_leaves(self):
         def tree_leaves(tree):
