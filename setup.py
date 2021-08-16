@@ -4,6 +4,7 @@ from setuptools.command.build_py import build_py
 from subprocess import check_call,run
 from distutils.core import Extension
 import os
+import shutil
 import stat
 
 # Borrowed from
@@ -27,7 +28,7 @@ class PreProcessing(build_py):
         run(["cargo","build","--release"])
         os.replace(compile_path,bin_path)
         os.chmod(bin_path,stat.S_IRWXU)
-        os.rmdir(src_path)
+        shutil.rmtree(src_path)
         build_py.run(self)
 
 
