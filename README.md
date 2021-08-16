@@ -8,4 +8,6 @@ It is currently intended to be run on linux or osx, but can limp on windows.
 
 ## Installation
 
-Installation is currently by cloning the repo, but an installer is in the works. 
+Installation is currently by pip -install of the sdist file located in this repo under /dist. 
+
+A conda installer is forthcoming, as is a pypi upload. 
