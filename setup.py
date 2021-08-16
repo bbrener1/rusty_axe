@@ -14,6 +14,15 @@ import stat
 class PreProcessing(build_py):
     """Pre-installation binary compilation."""
     def run(self):
+        try:
+            run("rustc")
+        except: 
+            print("Rust not detected. We'd like to download and install the rust tool suite with the default settings.")
+            c = input("That ok? y/n")
+            if c == "y":
+                run("curl https://sh.rustup.rs -sSf | sh -s -- -y")
+            else:
+                raise Exception("Aborting, please install rust/cargo")
         path = str((Path(__file__).parent).resolve())
         src_path = os.path.join(path,"rusty_axe","src")
         bin_dir_path = os.path.join(path,"rusty_axe","bin")
