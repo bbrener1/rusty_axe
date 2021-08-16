@@ -682,6 +682,8 @@ class NodeCluster:
         if output is None:
             html_location = self.html_directory()
         else:
+            if not os.path.exists(output):
+                os.makedirs(output)
             html_location = output
 
         # First we read in the template (TO DO improve safety)
