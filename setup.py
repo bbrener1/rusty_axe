@@ -14,10 +14,10 @@ class PreProcessing(build_py):
     """Pre-installation binary compilation."""
     def run(self):
         path = str((Path(__file__).parent).resolve())
-        print(f"Building binary at {path}")
         bin_dir_path = os.path.join(path,"rusty_axe","bin")
         bin_path =  os.path.join(bin_dir_path,"rf_5")
         compile_path = os.path.join(path,"target","release","rf_5")
+        print(f"Building binary at {bin_path}")
         os.mkdir(bin_dir_path)
         run(["cargo","build","--release"])
         os.replace(compile_path,bin_path)
