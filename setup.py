@@ -37,7 +37,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
     setuptools.setup(
         name="rusty-axe-bbrener1",
-        version="0.5",
+        version="0.6",
         author="Boris Brenerman",
         author_email="bbrener1@jhu.edu",
         description="Random Forest Latent Structure (Biology)",
@@ -73,5 +73,4 @@ with open("README.md", "r", encoding="utf-8") as fh:
             'scikit-learn',
             'matplotlib>=3.4.2'
         ],
-        python_requires="<3.9",
     )
