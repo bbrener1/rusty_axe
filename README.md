@@ -10,8 +10,28 @@ This package is currently intended to be run on linux or osx. This package may f
 
 ## Installation
 
-Installation is currently by pip -install of the sdist file located in this repo under /dist. 
+Please note, before installing you will need a rust compiler in the environment in which you wish to install. 
 
-Alternatively, if you wish to clone this repo, python setup.py should also do the trick. 
+A rust compiler can be obtained and silently installed by executing 
+
+`curl https://sh.rustup.rs -sSf | sh -s -- -y`
+
+If you wish to alter any aspect of the rust compiler defaults, you can execute 
+
+`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+
+or simply check the current recommendations at https://www.rust-lang.org/tools/install
+
+Installation is currently by 
+
+`pip -install rusty_axe_bbrener1.tar.gz`
+
+of the sdist tarball file located in this repo under /dist. 
+
+Alternatively, if you wish to clone this repo, 
+
+`python setup.py`
+
+executed while in the repo directory should also do the trick. 
 
 A conda installer is forthcoming, as is a pypi upload. 
