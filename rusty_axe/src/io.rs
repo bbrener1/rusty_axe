@@ -122,7 +122,7 @@ impl Parameters {
         let mut continuation_argument: String = "".to_string();
 
         let blank = args.next().unwrap();
-        eprintln!("Rust observes: {}",blank);
+        // eprintln!("Rust observes: {}",blank);
 
         while let Some((i,arg)) = args.enumerate().next() {
             if arg.clone().chars().next().unwrap_or('_') == '-' {
@@ -518,10 +518,6 @@ pub fn read_matrix(location:&str) -> Vec<Vec<f64>> {
 
         for (j,gene) in gene_line.split_whitespace().enumerate() {
 
-            if j == 0 && i%200==0{
-                print!("\n");
-            }
-
             if i%200==0 && j%200 == 0 {
                 print!("{} ", gene.parse::<f64>().unwrap_or(-1.) );
             }
@@ -551,14 +547,13 @@ pub fn read_matrix(location:&str) -> Vec<Vec<f64>> {
         count_array.push(gene_vector);
 
         if i % 100 == 0 {
-            println!("{}", i);
+            println!("Ingesting {} \r", i);
         }
 
 
     };
 
-    println!("===========");
-    println!("{},{}", count_array.len(),count_array.get(0).unwrap_or(&vec![]).len());
+    println!("Ingested {},{}", count_array.len(),count_array.get(0).unwrap_or(&vec![]).len());
 
     count_array
 
@@ -609,8 +604,6 @@ pub fn read_standard_in() -> Vec<Vec<f64>> {
 
 pub fn read_header(location: &str) -> Vec<String> {
 
-    println!("Reading header: {}", location);
-
     let mut header_map = HashMap::new();
 
     let header_file = File::open(location).expect("Header file error!");
@@ -631,8 +624,6 @@ pub fn read_header(location: &str) -> Vec<String> {
     let mut header_inter: Vec<(String,usize)> = header_map.iter().map(|x| (x.0.clone().clone(),x.1.clone())).collect();
     header_inter.sort_unstable_by_key(|x| x.1);
     let header_vector: Vec<String> = header_inter.into_iter().map(|x| x.0).collect();
-
-    println!("Read {} lines", header_vector.len());
 
     header_vector
 }

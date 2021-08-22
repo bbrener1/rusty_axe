@@ -96,7 +96,7 @@ impl Forest {
             .into_par_iter()
             .map(|i| {
 
-                println!("Computing tree {}",i);
+                println!("Computing tree {}\r",i);
 
                 let mut root = Node::prototype(
                             &self.input_features,
@@ -111,6 +111,8 @@ impl Forest {
 
                 root.to_serial().dump(specific_address)
             }).collect();
+
+        println!("");
 
         results.into_iter().try_fold((),|acc,x| x)
 

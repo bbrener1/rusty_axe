@@ -428,7 +428,7 @@ class Forest:
 
         trees = []
         for tree_file in combined_tree_files:
-            print(f"Loading {tree_file}")
+            print(f"Loading {tree_file}\r")
             trees.append(
                 Tree(json.load(open(tree_file.strip())), first_forest))
 
