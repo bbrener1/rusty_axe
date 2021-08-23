@@ -518,9 +518,6 @@ pub fn read_matrix(location:&str) -> Vec<Vec<f64>> {
 
         for (j,gene) in gene_line.split_whitespace().enumerate() {
 
-            if i%200==0 && j%200 == 0 {
-                print!("{} ", gene.parse::<f64>().unwrap_or(-1.) );
-            }
 
             // if !((gene.0 == 1686) || (gene.0 == 4660)) {
             //     continue
@@ -529,16 +526,16 @@ pub fn read_matrix(location:&str) -> Vec<Vec<f64>> {
             match gene.parse::<f64>() {
                 Ok(exp_val) => {
 
-                    gene_vector.push(exp_val);
-
+                    if exp_val != f64::NAN {
+                        gene_vector.push(exp_val);
+                    }
+                    else { panic!("Nan in input. Please sanitize matrix!") };
                 },
                 Err(msg) => {
 
-                    if gene != "nan" && gene != "NAN" {
-                        println!("Couldn't parse a cell in the text file, Rust sez: {:?}",msg);
-                        println!("Cell content: {:?}", gene);
-                    }
-                    gene_vector.push(f64::NAN);
+                    println!("Couldn't parse a cell in the text file, Rust sez: {:?}",msg);
+                    println!("Cell content: {:?}", gene);
+                    panic!();
                 }
             }
 

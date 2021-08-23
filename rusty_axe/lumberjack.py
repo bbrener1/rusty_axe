@@ -151,12 +151,12 @@ def inner_fit(input_counts, output_counts, location, backtrace=False, lrg_mem=No
             # sleep(0.1)
             rc = cp.poll()
             if rc is not None:
-                print(cp.stdout.read())
-                print(cp.stderr.read())
+                print(cp.stdout.read(),end='')
+                print(cp.stderr.read(),end='')
                 break
             output = cp.stdout.readline()
             # print("Read line")
-            print(output.strip())
+            print(output.strip(),end='')
 
     return arg_list
     # while cp.poll() is None:
