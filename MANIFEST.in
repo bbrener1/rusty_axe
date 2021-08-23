@@ -1,7 +1,8 @@
 include ./rusty_axe/*.py
 include ./rusty_axe/*.html
-include ./rusty_axe/tmp
+include ./rusty_axe/html/tmp
 include ./rusty_axe/figures/*.ipynb
 include ./rusty_axe/bin/*
 include ./rusty_axe/src/*.rs
+
 include ./Cargo.toml
