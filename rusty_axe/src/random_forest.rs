@@ -92,11 +92,13 @@ impl Forest {
 
     pub fn generate(&mut self) -> Result<(),Error> {
 
+        print!("\n");
+
         let results: Vec<Result<(),Error>> = (0..self.parameters.tree_limit)
             .into_par_iter()
             .map(|i| {
 
-                println!("Computing tree {}\r",i);
+                print!("Computing tree {}\r",i);
 
                 let mut root = Node::prototype(
                             &self.input_features,
@@ -112,7 +114,7 @@ impl Forest {
                 root.to_serial().dump(specific_address)
             }).collect();
 
-        println!("");
+        print!("\n");
 
         results.into_iter().try_fold((),|acc,x| x)
 
