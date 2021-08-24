@@ -142,11 +142,12 @@ def inner_fit(input_counts, output_counts, location, backtrace=False, lrg_mem=No
     # except:
     #     print("Communicated input")
     #
-    with sp.Popen(arg_list, stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.PIPE, universal_newlines=True) as cp:
+    with sp.Popen(arg_list, stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.PIPE,universal_newlines=True) as cp:
         # try:
         #     cp.communicate(input=targets,timeout=1)
         # except:
         #     pass
+        tree_count = 0
         while True:
             # sleep(0.1)
             rc = cp.poll()
@@ -154,9 +155,16 @@ def inner_fit(input_counts, output_counts, location, backtrace=False, lrg_mem=No
                 print(cp.stdout.read(),end='')
                 print(cp.stderr.read(),end='')
                 break
+            # output = cp.stdout.read(1000)
             output = cp.stdout.readline()
-            # print("Read line")
-            print(output.strip(),end='')
+            if output[:6] == "Ingest":
+                print(output.rstrip(),end="\r")
+            elif output[:9] == "Computing":
+                tree_count += 1
+                print(f"Computing tree {tree_count}",end='\r')
+                # print(output.rstrip(),end="\r")
+            else:
+                print(output)
 
     return arg_list
     # while cp.poll() is None:

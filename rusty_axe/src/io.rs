@@ -44,6 +44,7 @@ pub struct Parameters {
     pub report_address: String,
 
     pub processor_limit: usize,
+    pub parallel_trees: bool,
     pub tree_limit: usize,
     pub leaf_size_cutoff: usize,
     pub depth_cutoff: usize,
@@ -89,6 +90,7 @@ impl Parameters {
             // sample_names: vec![],
 
             processor_limit: 1,
+            parallel_trees: true,
             tree_limit: 1,
             leaf_size_cutoff: 1,
             depth_cutoff: 1,
@@ -206,6 +208,9 @@ impl Parameters {
                     arg_struct.processor_limit = args.next().expect("Error processing processor limit").parse::<usize>().expect("Error parsing processor limit");
                     rayon::ThreadPoolBuilder::new().num_threads(arg_struct.processor_limit).build_global().unwrap();
                     std::env::set_var("OMP_NUM_THREADS",format!("{}",arg_struct.processor_limit));
+                },
+                "-parallel_trees" => {
+                    arg_struct.parallel_trees = args.next().expect("Argument error").parse::<bool>().unwrap();
                 },
                 "-o" | "-output" => {
                     arg_struct.report_address = args.next().expect("Error processing output destination")
@@ -513,19 +518,10 @@ pub fn read_matrix(location:&str) -> Vec<Vec<f64>> {
     for (i,line) in count_array_lines.by_ref().enumerate() {
 
         let mut gene_vector = Vec::new();
-
         let gene_line = line.expect("Readline error");
-
         for (j,gene) in gene_line.split_whitespace().enumerate() {
-
-
-            // if !((gene.0 == 1686) || (gene.0 == 4660)) {
-            //     continue
-            // }
-
             match gene.parse::<f64>() {
                 Ok(exp_val) => {
-
                     if exp_val != f64::NAN {
                         gene_vector.push(exp_val);
                     }
@@ -538,19 +534,19 @@ pub fn read_matrix(location:&str) -> Vec<Vec<f64>> {
                     panic!();
                 }
             }
-
         }
 
         count_array.push(gene_vector);
 
         if i % 100 == 0 {
-            println!("Ingesting {} \r", i);
+            print!("Ingesting {}\r", i);
         }
 
 
     };
 
-    println!("Ingested {},{}", count_array.len(),count_array.get(0).unwrap_or(&vec![]).len());
+    print!("Ingested {},{}\r", count_array.len(),count_array.get(0).unwrap_or(&vec![]).len());
+    print!("                                          ");
 
     count_array
 
