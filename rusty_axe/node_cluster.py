@@ -1,4 +1,4 @@
-from rusty_axe.tree_reader_utils import js_wrap, generate_feature_value_html, generate_cross_reference_table, weighted_correlation
+from rusty_axe.utils import js_wrap, generate_feature_value_html, generate_cross_reference_table, weighted_correlation
 import os
 
 import numpy as np
@@ -8,8 +8,6 @@ from matplotlib.colors import TwoSlopeNorm
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-
-# mpl.rcParams['figure.dpi'] = 10
 
 DPI_SET = 100
 
@@ -62,9 +60,6 @@ class NodeCluster:
     def ancestors(self):
 
         return [a for n in self.nodes for a in n.ancestors()]
-    #
-    # def weighted_feature_predictions(self):
-    #     return self.forest.weighted_node_vector_prediction(self.nodes)
 
 
 ################################################################################
@@ -227,23 +222,6 @@ class NodeCluster:
         sorted_ratios = error_ratio[ratio_sort]
 
         return sorted_features, sorted_ratios
-
-    # def raw_error(self):
-    #
-    #     # We want to figure out how much of the error in a given feature is explained by the nodes in this cluster
-    #     # We want the overall ratio of error in the parents vs the error in the nodes of this cluster
-    #
-    #     parent_total_error = np.zeros(len(self.forest.output_features))
-    #     sister_total_error = np.zeros(len(self.forest.output_features))
-    #     self_total_error = np.zeros(len(self.forest.output_features))
-    #
-    #     for node in self.nodes:
-    #         if node.parent is not None:
-    #             self_total_error += node.squared_residual_sum()
-    #             sister_total_error += node.sister().squared_residual_sum()
-    #             parent_total_error += node.parent.squared_residual_sum()
-    #
-    #     return self_total_error,sister_total_error,parent_total_error
 
     def strict_error_ratio(self):
 
@@ -651,12 +629,6 @@ class NodeCluster:
             location = self.html_directory()
         else:
             location = output
-
-        # local_cross,important_local = self.top_local_table(n)
-        # global_cross,important_global = self.top_global_table(n)
-        #
-        # local_html = generate_cross_reference_table(local_cross,important_local)
-        # global_html = generate_cross_reference_table(global_cross,important_global)
 
         print("Generating top local")
 

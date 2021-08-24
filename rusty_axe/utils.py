@@ -77,8 +77,6 @@ def sample_agglomerative(nodes, samples, n_clusters):
     clusters = clustering_model.fit_predict(
         scipy.spatial.distance.squareform(pre_computed_distance))
 
-#     clusters = clustering_model.fit_predict(node_encoding)
-
     return clusters
 
 
@@ -155,7 +153,6 @@ def generate_html_table(mtx, row_header = None, col_header = None, colors=None):
         rows.append(row_str)
 
     html_elements = [
-        # '<table width="100%">',
         '<table>',
         "<style>",
         "th,td {padding:5px; min-width:30px;max-width:30px;}",
@@ -174,9 +171,6 @@ def generate_html_table(mtx, row_header = None, col_header = None, colors=None):
 
 def generate_cross_reference_table(mtx,features):
 
-    # Pad the feature list to offset for 0,0
-    # features = ["", *features]
-
     # Generate color values
 
     cmap = mpl.cm.get_cmap("bwr")
@@ -192,8 +186,22 @@ def js_wrap(name, content):
 
 def fast_knn(elements, k, neighborhood_fraction=.01, metric='euclidean'):
 
-    # Finds the indices of k nearest neighbors for each sample in a matrix,
-    # using any of the standard scipy distance metrics.
+
+"""
+Finds the indices of k nearest neighbors for each sample in a matrix, using any of the standard scipy distance metrics.
+
+Arguments:
+Elements: NxM matrix of N elements, M features. This is the thing we are giving you k-nearest-neighbors of.
+k: uint < N. The number of nearest neighbors to find.
+Neighborhood fraction: don't worry about it. (The number of fragments that the input is divided into to evaluate the triangle inequality. For REALLY huge inputs try setting it lower, like .001)
+
+What's so special about this function? Isn't there a builtin that does this? Yes. This function is special because it does not have to compute the entire pairwise distance matrix between each element in elements and each other element. For large numbers of elements this saves time and space.
+
+This is only guaranteed correct when used with a TRUE METRIC THAT OBEYS THE TRIANGLE INEQUALITY
+
+(but realistically it works sort of ok even if that's not true)
+
+"""
 
     nearest_neighbors = np.zeros((elements.shape[0], k), dtype=int)
     complete = np.zeros(elements.shape[0], dtype=bool)
@@ -219,29 +227,15 @@ def fast_knn(elements, k, neighborhood_fraction=.01, metric='euclidean'):
                 anchor_distances = cdist(elements[anchor].reshape(
                     1, -1), elements, metric=metric)[0]
 
-            # print(anchor_distances.shape)
-
             neighborhood = np.argpartition(anchor_distances, neighborhood_size)[
                 :neighborhood_size]
             anchor_local = np.where(neighborhood == anchor)[0]
-
-            # print(neighborhood)
-            # print(anchor_distances[neighborhood])
-            # print(anchor_local)
-            #
-            # print("FKNN debug")
-            # print(elements.shape)
-            # print(elements[neighborhood].shape)
 
             if metric == "sister":
                 local_distances = sister_distance(elements[neighborhood])
             else:
                 local_distances = squareform(
                     pdist(elements[neighborhood], metric=metric))
-
-            # print("FKNN debug 2")
-            # print(anchor_distances.shape)
-            # print(local_distances.shape)
 
             anchor_to_worst = np.max(local_distances[anchor_local])
 
@@ -293,6 +287,14 @@ def fast_knn(elements, k, neighborhood_fraction=.01, metric='euclidean'):
 
 
 def double_fast_knn(elements1, elements2, k, neighborhood_fraction=.01, metric='cosine'):
+
+"""
+See also fast_knn
+
+This is fast_knn where we have two sets of elements. The elements are matched (for nodes each element in set 2 is a sister of the node in set 1). We use it when we wish to find a KNN where the average of the two sets of distances is used. This is useful for incorporating the relatives of nodes when computing a KNNfor node clustering. Why not simply find the average of the two matrices?
+
+Same rationale as fast_knn: We don't have to compute the whole distance matrix, only small chunks of it.
+"""
 
     if elements1.shape != elements2.shape:
         raise Exception("Average metric knn inputs must be same size")
@@ -354,11 +356,6 @@ def double_fast_knn(elements1, elements2, k, neighborhood_fraction=.01, metric='
                     # By the triangle inequality the closest any element outside the neighborhood
                     # can be to element we are examining is the criterion distance:
                     criterion_distance = anchor_to_worst - anchor_distance
-
-#                     if sample == 0:
-#                         print(f"ld:{local_distances[i][best_neighbors_local[:k]]}")
-#                         print(f"bwd:{best_worst_distance}")
-#                         print(f"cd:{criterion_distance}")
 
                     # Therefore if the criterion distance is greater than the best worst distance, the local knn
                     # is also the best global knn
