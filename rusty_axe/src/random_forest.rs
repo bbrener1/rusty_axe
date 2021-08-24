@@ -89,51 +89,61 @@ impl Forest {
                 }
     }
 
+    pub fn compute_tree(&self,index:usize) -> Result<(),Error> {
+
+        print!("Computing tree {}\r",index);
+        io::stdout().flush()?;
+
+        let mut root = Node::prototype(
+                    &self.input_features,
+                    &self.output_features,
+                    &self.samples,
+                    &self.parameters,
+                );
+
+        root.grow(&self.prototype,&self.parameters);
+
+        let specific_address = format!("{}.tree_{}.compact",self.parameters.report_address,index);
+
+        root.to_serial().dump(specific_address)
+
+    }
 
     pub fn generate(&mut self) -> Result<(),Error> {
 
-        let results: Vec<Result<(),Error>> = (0..self.parameters.tree_limit)
-            .into_par_iter()
-            .map(|i| {
 
-                println!("Computing tree {}",i);
+        if self.parameters.parallel_trees {
 
-                let mut root = Node::prototype(
-                            &self.input_features,
-                            &self.output_features,
-                            &self.samples,
-                            &self.parameters,
-                        );
+            println!("Working on trees (not in order)");
 
-                root.grow(&self.prototype,&self.parameters);
+            let results: Vec<Result<(),Error>> = (0..self.parameters.tree_limit)
+                .into_par_iter()
+                .map(|i| {
+                    self.compute_tree(i)
+                }).collect();
 
-                let specific_address = format!("{}.tree_{}.compact",self.parameters.report_address,i);
+            print!("\n");
 
-                root.to_serial().dump(specific_address)
-            }).collect();
+            results.into_iter().try_fold((),|acc,x| x)
+        }
+        else {
 
-        results.into_iter().try_fold((),|acc,x| x)
+            println!("Working on trees");
 
-    //     for i in (0..self.parameters.tree_limit) {
-    //
-    //         println!("Computing tree {}",i);
-    //
-    //         let mut root = Node::prototype(
-    //                     &self.input_features,
-    //                     &self.output_features,
-    //                     &self.samples,
-    //                     &self.parameters,
-    //                 );
-    //
-    //         root.grow(&self.prototype,&self.parameters);
-    //
-    //         let specific_address = format!("{}.tree_{}.compact",self.parameters.report_address,i);
-    //
-    //         root.to_serial().dump(specific_address)?;
-    //     }
-    //
-    //     Ok(())
+            let results: Vec<Result<(),Error>> = (0..self.parameters.tree_limit)
+                .map(|i| {
+                    self.compute_tree(i)
+                }).collect();
+
+            print!("\n");
+
+            results.into_iter().try_fold((),|acc,x| x)
+
+        }
+
     }
+
+
 
 
 
