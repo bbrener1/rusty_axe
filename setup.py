@@ -76,6 +76,12 @@ with open("README.md", "r", encoding="utf-8") as fh:
         cmdclass={
             'build_py' : PreProcessing,
         },
+        ext_modules=[
+            setuptools.Extension(
+                name='rf_5',
+                sources=[]
+            )
+        ],
         install_requires=[
             'scanpy',
             'leidenalg',
