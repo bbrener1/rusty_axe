@@ -420,8 +420,8 @@ impl RankMatrix {
 
         let mut minima: Vec<(usize,usize,f64)> =
             draw_orders
-                .into_iter()
-                // .into_par_iter()
+                // .into_iter()
+                .into_par_iter()
                 .enumerate()
                 .flat_map(|(i,draw_order)| {
                     let ordered_dispersions = output_matrix.order_dispersions(&draw_order);

@@ -88,8 +88,6 @@ def fit(input_counts, cache = True, output_counts=None, ifh=None, ofh=None, head
     tmp_dir = None
     if location is None:
 
-        print("Setting context")
-
         print("Input:" + str(input_counts.shape))
         print("Output:" + str(output_counts.shape))
 
@@ -98,18 +96,6 @@ def fit(input_counts, cache = True, output_counts=None, ifh=None, ofh=None, head
 
     arguments = save_trees(tmp_dir.name + "/", input_counts=input_counts, output_counts=output_counts,
                            ifh=ifh, ofh=ofh, header=header, lrg_mem=lrg_mem, **kwargs)
-
-    # print("CHECK TRUTH")
-    # print(tmp_dir.name)
-    # print(os.listdir(tmp_dir.name))
-    #
-    # print("Generating trees")
-
-    # inner_fit(input_counts,output_counts,location,ifh=location + 'tmp.ifh',ofh=location + 'tmp.ofh',backtrace=backtrace,**kwargs)
-    # ihmm_fit(location)
-
-    print("CHECK OUTPUT")
-    print(os.listdir(tmp_dir.name))
 
     forest = tr.Forest.load_from_rust(location, prefix="tmp", ifh="tmp.ifh", ofh="tmp.ofh",
                                       clusters="tmp.clusters", input="input.counts", output="output.counts")
@@ -156,21 +142,29 @@ def inner_fit(input_counts, output_counts, location, backtrace=False, lrg_mem=No
     # except:
     #     print("Communicated input")
     #
-    with sp.Popen(arg_list, stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.PIPE, universal_newlines=True) as cp:
+    with sp.Popen(arg_list, stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.PIPE,universal_newlines=True) as cp:
         # try:
         #     cp.communicate(input=targets,timeout=1)
         # except:
         #     pass
+        tree_count = 0
         while True:
             # sleep(0.1)
             rc = cp.poll()
             if rc is not None:
-                print(cp.stdout.read())
-                print(cp.stderr.read())
+                print(cp.stdout.read(),end='')
+                print(cp.stderr.read(),end='')
                 break
+            # output = cp.stdout.read(1000)
             output = cp.stdout.readline()
-            # print("Read line")
-            print(output.strip())
+            if output[:6] == "Ingest":
+                print(output.rstrip(),end="\r")
+            elif output[:9] == "Computing":
+                tree_count += 1
+                print(f"Computing tree {tree_count}",end='\r')
+                # print(output.rstrip(),end="\r")
+            else:
+                print(output)
 
     return arg_list
     # while cp.poll() is None:

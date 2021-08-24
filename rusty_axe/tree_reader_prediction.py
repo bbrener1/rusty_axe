@@ -23,6 +23,7 @@ class Prediction:
         self.mode = None
         self.nse = None
         self.nme = None
+        self.nmd = None
         self.nae = None
         self.smc = None
         self.nsr2 = None
@@ -44,6 +45,11 @@ class Prediction:
         if self.nae is None:
             self.nae = self.forest.mean_additive_matrix(self.forest.nodes())
         return self.nae
+
+    def node_median_encoding(self):
+        if self.nmd is None:
+            self.nmd = self.forest.median_matrix(self.forest.nodes())
+        return self.nmd
 
     def node_sample_r2(self):
         truth = self.matrix
@@ -100,6 +106,19 @@ class Prediction:
         prediction[scaling == 0] = 0
         return prediction
 
+
+    def median_prediction(self,mask = None):
+        if mask is None:
+            mask = self.forest.leaf_mask()
+        encoding_prediction = self.node_sample_encoding()[mask].T
+        feature_predictions = self.node_median_encoding()[mask]
+        scaling = np.dot(encoding_prediction,
+                         np.ones(feature_predictions.shape))
+
+        prediction = np.dot(encoding_prediction, feature_predictions) / scaling
+        prediction[scaling == 0] = 0
+        return prediction
+
     def observed_means(self,nodes = None):
         if nodes is None:
             nodes = self.forest.nodes()
@@ -144,6 +163,8 @@ class Prediction:
             prediction = self.additive_prediction()
         elif mode == "mean":
             prediction = self.mean_prediction()
+        elif mode == "median":
+            prediction = self.median_prediction()
         else:
             raise Exception(f"Not a valid mode {mode}")
 
@@ -665,15 +686,21 @@ class Prediction:
 
     def prediction_report(self, truth=None, n=10, mode="additive_mean", no_plot=False):
 
-        null_square_residuals = np.power(self.null_residuals(truth=truth), 2)
+        null_residuals = self.null_residuals(truth=truth)
+        null_square_residuals = np.power(null_residuals, 2)
+        null_absolute_sum = np.sum(np.abs(null_residuals))
         null_residual_sum = np.sum(null_square_residuals)
 
-        forest_square_residuals = np.power(self.residuals(truth=truth), 2)
+        forest_residuals = self.residuals(truth=truth,mode=mode)
+        forest_square_residuals = np.power(forest_residuals, 2)
+        predicted_absolute_sum = np.sum(np.abs(forest_residuals))
         predicted_residual_sum = np.sum(forest_square_residuals)
 
         unexplained = predicted_residual_sum / null_residual_sum
+        absolute_unexplained = predicted_absolute_sum / null_absolute_sum
 
-        print(f"Fraction Unexplained:{unexplained}")
+        print(f"Fraction unexplained:{unexplained}")
+        print(f"Fraction unexplained (absolute): {absolute_unexplained}")
 
         # Add one here to avoid divisions by zero, but this is bad
         # Need better solution

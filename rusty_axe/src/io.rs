@@ -44,6 +44,7 @@ pub struct Parameters {
     pub report_address: String,
 
     pub processor_limit: usize,
+    pub parallel_trees: bool,
     pub tree_limit: usize,
     pub leaf_size_cutoff: usize,
     pub depth_cutoff: usize,
@@ -89,6 +90,7 @@ impl Parameters {
             // sample_names: vec![],
 
             processor_limit: 1,
+            parallel_trees: true,
             tree_limit: 1,
             leaf_size_cutoff: 1,
             depth_cutoff: 1,
@@ -122,7 +124,7 @@ impl Parameters {
         let mut continuation_argument: String = "".to_string();
 
         let blank = args.next().unwrap();
-        eprintln!("Rust observes: {}",blank);
+        // eprintln!("Rust observes: {}",blank);
 
         while let Some((i,arg)) = args.enumerate().next() {
             if arg.clone().chars().next().unwrap_or('_') == '-' {
@@ -206,6 +208,9 @@ impl Parameters {
                     arg_struct.processor_limit = args.next().expect("Error processing processor limit").parse::<usize>().expect("Error parsing processor limit");
                     rayon::ThreadPoolBuilder::new().num_threads(arg_struct.processor_limit).build_global().unwrap();
                     std::env::set_var("OMP_NUM_THREADS",format!("{}",arg_struct.processor_limit));
+                },
+                "-parallel_trees" => {
+                    arg_struct.parallel_trees = args.next().expect("Argument error").parse::<bool>().unwrap();
                 },
                 "-o" | "-output" => {
                     arg_struct.report_address = args.next().expect("Error processing output destination")
@@ -513,52 +518,35 @@ pub fn read_matrix(location:&str) -> Vec<Vec<f64>> {
     for (i,line) in count_array_lines.by_ref().enumerate() {
 
         let mut gene_vector = Vec::new();
-
         let gene_line = line.expect("Readline error");
-
         for (j,gene) in gene_line.split_whitespace().enumerate() {
-
-            if j == 0 && i%200==0{
-                print!("\n");
-            }
-
-            if i%200==0 && j%200 == 0 {
-                print!("{} ", gene.parse::<f64>().unwrap_or(-1.) );
-            }
-
-            // if !((gene.0 == 1686) || (gene.0 == 4660)) {
-            //     continue
-            // }
-
             match gene.parse::<f64>() {
                 Ok(exp_val) => {
-
-                    gene_vector.push(exp_val);
-
+                    if exp_val != f64::NAN {
+                        gene_vector.push(exp_val);
+                    }
+                    else { panic!("Nan in input. Please sanitize matrix!") };
                 },
                 Err(msg) => {
 
-                    if gene != "nan" && gene != "NAN" {
-                        println!("Couldn't parse a cell in the text file, Rust sez: {:?}",msg);
-                        println!("Cell content: {:?}", gene);
-                    }
-                    gene_vector.push(f64::NAN);
+                    println!("Couldn't parse a cell in the text file, Rust sez: {:?}",msg);
+                    println!("Cell content: {:?}", gene);
+                    panic!();
                 }
             }
-
         }
 
         count_array.push(gene_vector);
 
         if i % 100 == 0 {
-            println!("{}", i);
+            print!("Ingesting {}\r", i);
         }
 
 
     };
 
-    println!("===========");
-    println!("{},{}", count_array.len(),count_array.get(0).unwrap_or(&vec![]).len());
+    print!("Ingested {},{}\r", count_array.len(),count_array.get(0).unwrap_or(&vec![]).len());
+    print!("                                          ");
 
     count_array
 
@@ -609,8 +597,6 @@ pub fn read_standard_in() -> Vec<Vec<f64>> {
 
 pub fn read_header(location: &str) -> Vec<String> {
 
-    println!("Reading header: {}", location);
-
     let mut header_map = HashMap::new();
 
     let header_file = File::open(location).expect("Header file error!");
@@ -631,8 +617,6 @@ pub fn read_header(location: &str) -> Vec<String> {
     let mut header_inter: Vec<(String,usize)> = header_map.iter().map(|x| (x.0.clone().clone(),x.1.clone())).collect();
     header_inter.sort_unstable_by_key(|x| x.1);
     let header_vector: Vec<String> = header_inter.into_iter().map(|x| x.0).collect();
-
-    println!("Read {} lines", header_vector.len());
 
     header_vector
 }

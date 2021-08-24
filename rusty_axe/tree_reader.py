@@ -345,6 +345,8 @@ class Forest:
     def median_matrix(self, nodes):
         predictions = np.zeros((len(nodes), len(self.output_features)))
         for i, node in enumerate(nodes):
+            if i%10 == 0:
+                print(f"Estimating node {i}\r",end='')
             predictions[i] = node.medians()
         return predictions
 
@@ -428,7 +430,7 @@ class Forest:
 
         trees = []
         for tree_file in combined_tree_files:
-            print(f"Loading {tree_file}")
+            print(f"Loading {tree_file}\r",end='')
             trees.append(
                 Tree(json.load(open(tree_file.strip())), first_forest))
 
