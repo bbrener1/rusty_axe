@@ -1,5 +1,6 @@
 import numpy as np
-from copy import copy,deepcopy
+from copy import copy, deepcopy
+
 
 class Node:
 
@@ -15,7 +16,6 @@ class Node:
         self.lr = lr
         self.level = level
         self.filter = Filter(node_json['filter'], self)
-        # self.samples = np.array(node_json['samples'])
         self.local_samples = None
         if 'means' in node_json:
             self.mean_cache = np.array(node_json['means'])
@@ -118,8 +118,8 @@ class Node:
 
         counts = self.node_counts()
         means = np.mean(counts, axis=0)
-        medians = np.median(counts,axis=0)
-        srs = np.sum(np.power(counts - means,2),axis=0)
+        medians = np.median(counts, axis=0)
+        srs = np.sum(np.power(counts - means, 2), axis=0)
 
         self.mean_cache = means
         self.median_cache = medians
@@ -165,7 +165,6 @@ class Node:
         values = self.forest.output[self.sample_mask()].T[fi]
         return np.median(values)
 
-
     def sample_cluster_means(self):
 
         labels = self.forest.sample_labels[self.samples()]
@@ -187,8 +186,7 @@ class Node:
             values = self.forest.output[self.sample_mask()].T[fi]
             return np.mean(values)
 
-
-    def feature_partial(self,feature):
+    def feature_partial(self, feature):
         if len(self.children) > 1:
 
             descendants = self.nodes()
@@ -199,8 +197,8 @@ class Node:
             populations = [n.pop() for n in descendants]
 
             self_additive = self.feature_additive_mean(feature)
-            self_ads = np.power(self_additive,2) * self.pop()
-            adrs = np.dot(np.power(additives,2).T, populations)
+            self_ads = np.power(self_additive, 2) * self.pop()
+            adrs = np.dot(np.power(additives, 2).T, populations)
 
             adrf = self_ads / (self_ads + adrs)
 
@@ -209,11 +207,9 @@ class Node:
 
             partial = np.sign(self_additive) * adrf
 
-
             return partial
         else:
             return self.feature_additive_mean(feature)
-
 
     def mean_residuals(self):
 
@@ -233,22 +229,22 @@ class Node:
 
     def explained(self):
         if self.parent is None:
-            if hasattr(self,'explained_cache'):
+            if hasattr(self, 'explained_cache'):
                 return self.explained_cache
             else:
-                additives = self.forest.node_representation(self.nodes(),mode='additive_mean')
-                squared = np.power(additives,2)
-                return np.sum(squared,axis=0)
+                additives = self.forest.node_representation(
+                    self.nodes(), mode='additive_mean')
+                squared = np.power(additives, 2)
+                return np.sum(squared, axis=0)
         else:
             return self.root().explained()
-
 
     def absolute_partials(self):
         if self.parent is not None:
             explained = self.explained()
             own_additive = self.additive_mean_gains()
-            own = np.power(own_additive,2)
-            signed = np.sign(own_additive) * (own/explained)
+            own = np.power(own_additive, 2)
+            signed = np.sign(own_additive) * (own / explained)
             return signed
         else:
             return np.zeros(len(self.forest.output_features))
@@ -260,12 +256,14 @@ class Node:
             if self.sister() is not None:
                 descendants.extend(self.sister().nodes())
 
-            additives = self.forest.node_representation(descendants,mode='additive_mean')
-            populations = np.sum(self.forest.node_representation(descendants,mode='sample'),axis=1)
+            additives = self.forest.node_representation(
+                descendants, mode='additive_mean')
+            populations = np.sum(self.forest.node_representation(
+                descendants, mode='sample'), axis=1)
 
             self_additives = self.additive_mean_gains()
-            self_ads = np.power(self_additives,2) * self.pop()
-            adrs = np.dot(np.power(additives,2).T, populations)
+            self_ads = np.power(self_additives, 2) * self.pop()
+            adrs = np.dot(np.power(additives, 2).T, populations)
 
             adrf = self_ads / (self_ads + adrs)
 
@@ -273,11 +271,9 @@ class Node:
 
             partials = np.sign(self_additives) * adrf
 
-
             return partials
         else:
             return self.additive_mean_gains()
-
 
     def mean_residual_doublet(self):
         counts = self.node_counts()
@@ -290,8 +286,7 @@ class Node:
         self_residuals = counts - self_means
         parent_residuals = counts - parent_means
 
-        return self_residuals,parent_residuals
-
+        return self_residuals, parent_residuals
 
     def squared_residual_sum(self):
         if hasattr(self, 'srs_cache'):
@@ -304,17 +299,18 @@ class Node:
             return srs
 
     def squared_residual_doublet(self):
-        self_residuals,parent_residuals = self.mean_residual_doublet()
-        self_srs = np.sum(np.power(self_residuals,2),axis=0)
-        parent_srs = np.sum(np.power(parent_residuals,2),axis=0)
+        self_residuals, parent_residuals = self.mean_residual_doublet()
+        self_srs = np.sum(np.power(self_residuals, 2), axis=0)
+        parent_srs = np.sum(np.power(parent_residuals, 2), axis=0)
 
-        return self_srs,parent_srs
+        return self_srs, parent_srs
 
     def coefficient_of_determination(self):
         self_srs = self.squared_residual_sum()
         if self.parent is not None:
             parent_srs = self.parent.squared_residual_sum()
-            cod = 1 - (np.sum(self_srs)/self.pop())/(np.sum(parent_srs)/self.parent.pop())
+            cod = 1 - (np.sum(self_srs) / self.pop()) / \
+                (np.sum(parent_srs) / self.parent.pop())
         else:
             cod = np.zeros(self.pop)
 
@@ -571,7 +567,6 @@ class Node:
 
         return [self.forest.samples[i] for i in self.samples()]
 
-
     def feature(self):
 
         # Best guess at the "split feature" of this node, if any
@@ -599,7 +594,7 @@ class Node:
             d = max(child.depth(d + 1), d)
         return d
 
-    def trim(self,limit):
+    def trim(self, limit):
 
         if self.coefficient_of_determination() < limit:
             self.local_samples = self.samples()
@@ -608,7 +603,7 @@ class Node:
         for child in self.children:
             child.trim(limit)
 
-    def trim_population(self,limit):
+    def trim_population(self, limit):
 
         if self.coefficient_of_determination() < limit:
             self.local_samples = self.samples()
@@ -786,7 +781,7 @@ class Node:
             except:
                 continue
 
-    def derive_samples(self,samples):
+    def derive_samples(self, samples):
 
         if self.local_samples is not None:
             self_copy = self.derived_copy()
@@ -867,6 +862,7 @@ class Filter:
             return scores > self.split
         else:
             return scores <= self.split
+
 
 class Reduction:
 
