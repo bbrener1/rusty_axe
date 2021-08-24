@@ -310,10 +310,6 @@ class Node:
 
         return self_srs,parent_srs
 
-    # def coefficient_of_determination(self):
-    #     self_srs,parent_srs = self.squared_residual_doublet()
-    #     cod = 1 - np.sum(self_srs)/np.sum(parent_srs)
-    #     return cod
     def coefficient_of_determination(self):
         self_srs = self.squared_residual_sum()
         if self.parent is not None:
@@ -575,25 +571,6 @@ class Node:
 
         return [self.forest.samples[i] for i in self.samples()]
 
-    def prerequisite_levels(self):
-
-        # May be defunct if prerequisites are going by the wayside in favor of braids
-
-        prerequisite_levels = []
-        for child in self.children:
-            prerequisite_levels.extend(child.prerequisite_levels())
-        prerequisite_levels.append((self.prerequisites[-1], self.level))
-        return prerequisite_levels
-
-    def braid_levels(self):
-
-        # Provides the braids that appear in the children of this node, paired to the level they occur at
-
-        braid_levels = []
-        for child in self.children:
-            braid_levels.extend(child.braid_levels())
-        braid_levels.append((self.braids[-1], self.level))
-        return braid_levels
 
     def feature(self):
 
@@ -846,14 +823,6 @@ class Node:
         self_copy.child_clusters = deepcopy(self.child_clusters)
         self_copy.reset_cache()
         return self_copy
-
-    # def lr_encoding_vectors(self):
-    #     left = np.zeros(len(self.forest.samples),dtype=bool)
-    #     right = np.zeros(len(self.forest.samples),dtype=bool)
-    #     child_masks = [left,right]
-    #     for i,child in enumerate(self.children):
-    #         child_masks[i] = child.sample_mask()
-    #     return child_masks
 
 
 class Filter:

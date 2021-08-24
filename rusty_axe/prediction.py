@@ -10,7 +10,6 @@ from scipy.stats import mannwhitneyu
 from scipy.stats import t,iqr
 from scipy.spatial.distance import cdist,pdist
 
-# from tree_reader_utils import jackknife_variance
 
 mpl.rcParams['figure.dpi'] = 100
 
@@ -371,8 +370,6 @@ class Prediction:
         print(result)
 
         return self_mean,other_mean,result
-    #
-    # def compare_factor_features(self,other,factor):
 
 
     def compare_factor_residuals(self,other,factor):
@@ -381,9 +378,6 @@ class Prediction:
 
         self_factor_mse,self_factor_mse_variance,self_factor_iqr = self.factor_mse(factor)
         other_factor_mse,other_factor_mse_variance,other_factor_iqr = other.factor_mse(factor)
-
-        # self_factor_mse,self_factor_mse_variance = self.jackknife_factor_mse(factor)
-        # other_factor_mse,other_factor_mse_variance = other.jackknife_factor_mse(factor)
 
         self_mse_std = np.sqrt(self_factor_mse_variance)
         factor_z = (self_factor_mse - other_factor_mse) / self_mse_std
