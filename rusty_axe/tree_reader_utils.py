@@ -211,7 +211,7 @@ def fast_knn(elements, k, neighborhood_fraction=.01, metric='euclidean'):
         anchors = available[:int(complete.shape[0] / neighborhood_size) * 3]
 
         for anchor in anchors:
-            # print(f"Complete:{np.sum(complete)}\r", end='')
+            print(f"Complete:{np.sum(complete)}\r", end='')
 
             if metric == "sister":
                 anchor_distances = sister_distance(elements[anchor].reshape(1,-1),elements)[0]
