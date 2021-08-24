@@ -1,10 +1,10 @@
 
-from rusty_axe.tree_reader_utils import fast_knn, double_fast_knn, hacked_louvain, generate_feature_value_html,sister_distance
-from rusty_axe.tree_reader_node import Node, Reduction, Filter
-from rusty_axe.tree_reader_prediction import Prediction
-from rusty_axe.tree_reader_sample_cluster import SampleCluster
-from rusty_axe.tree_reader_node_cluster import NodeCluster
-from rusty_axe.tree_reader_tree import Tree
+from rusty_axe.utils import fast_knn, double_fast_knn, hacked_louvain, generate_feature_value_html,sister_distance
+from rusty_axe.node import Node, Reduction, Filter
+from rusty_axe.prediction import Prediction
+from rusty_axe.sample_cluster import SampleCluster
+from rusty_axe.node_cluster import NodeCluster
+from rusty_axe.tree import Tree
 
 from json import dumps as jsn_dumps
 from os import makedirs
@@ -705,7 +705,6 @@ class Forest:
         else:
             if pca is not None:
                 counts = PCA(n_components=pca).fit_transform(counts)
-                # self.set_sample_labels(sdg.fit_predict(counts, *args, **kwargs))
                 self.set_sample_labels(hacked_louvain(
                     fast_knn(counts, **kwargs), resolution=resolution))
             else:
@@ -733,7 +732,6 @@ class Forest:
         if hasattr(self, 'sample_clusters') and not override:
             print("Clustering has already been done")
         else:
-            # self.set_sample_labels(sdg.fit_predict(encoding, *args, **kwargs))
             self.set_sample_labels(
                 1 + hacked_louvain(fast_knn(encoding, **kwargs), resolution=resolution))
 
@@ -752,8 +750,6 @@ class Forest:
 
         print(f"encoding dimensions: {encoding.shape}")
 
-        # from scipy.stats import mode
-
         sample_labels = []
 
         for leaf_mask in encoding:
@@ -761,8 +757,6 @@ class Forest:
                 [np.sum(leaf_clusters[leaf_mask] == lc) for lc in range(len(leaf_cluster_sizes))])
             odds = leaf_cluster_counts / leaf_cluster_sizes
             sample_labels.append(np.argmax(odds))
-
-        # sample_labels = [mode(leaf_clusters[mask])[0][0] for mask in encoding]
 
         self.set_sample_labels(np.array(sample_labels).astype(dtype=int))
 
@@ -786,22 +780,6 @@ class Forest:
         self.leaf_clusters = clusters
         for leaf, label in zip(leaves, self.leaf_labels):
             leaf.leaf_cluster = label
-    #
-    # def cluster_leaves_samples(self, override=False, pca=None, depth=None, *args, **kwargs):
-    #
-    #     leaves = self.leaves(depth=depth)
-    #     encoding = self.node_sample_encoding(leaves).T
-    #
-    #     if pca is not None:
-    #         encoding = PCA(n_components=pca).fit_transform(encoding)
-    #
-    #     if hasattr(self, 'leaf_clusters') and not override:
-    #         print("Clustering has already been done")
-    #         return self.leaf_labels
-    #     else:
-    #         self.set_leaf_labels(sdg.fit_predict(encoding, *args, **kwargs))
-    #
-    #     return self.leaf_labels
 
     def cluster_leaves_predictions(self, override=False, mode='mean', *args, **kwargs):
 
@@ -900,18 +878,11 @@ class Forest:
 
         if relatives:
 
-            # print("Relativistic distance (heh)")
-
             own_representation = self.node_representation(
                 nodes[stem_mask], mode=mode, pca=pca)
             sister_representation = self.node_representation(
                 [n.sister() for n in nodes[stem_mask]], mode=mode, pca=pca)
 
-            # print("Representations:")
-            # print(own_representation.shape)
-            # print(sister_representation.shape)
-
-            # print("Running double knn")
             knn = double_fast_knn(own_representation,
                                   sister_representation, k=k, metric=metric, **kwargs)
 
@@ -919,15 +890,12 @@ class Forest:
             representation = self.node_representation(
                 nodes[stem_mask], mode=mode, pca=pca)
 
-            # print("Running knn")
             knn = fast_knn(representation, k=k, metric=metric, **kwargs)
 
-        # print("Calling clustering procedure")
         labels[stem_mask] = 1 + hacked_louvain(knn, resolution=resolution)
 
         for node, label in zip(nodes, labels):
             node.set_split_cluster(label)
-            # node.split_cluster = label
 
         cluster_set = set(labels)
         clusters = []
@@ -935,9 +903,6 @@ class Forest:
             split_index = np.arange(len(labels))[labels == cluster]
             clusters.append(NodeCluster(
                 self, [nodes[i] for i in split_index], cluster))
-
-        # split_order = np.argsort(labels)
-        # split_order = dendrogram(linkage(reduction,metric='cos',method='average'),no_plot=True)['leaves']
 
         self.split_clusters = clusters
         self.factors = self.split_clusters
@@ -964,9 +929,6 @@ class Forest:
             split_index = np.arange(len(labels))[labels == cluster]
             clusters.append(NodeCluster(
                 self, [nodes[i] for i in split_index], cluster))
-
-        # split_order = np.argsort(labels)
-        # split_order = dendrogram(linkage(reduction,metric='cos',method='average'),no_plot=True)['leaves']
 
         self.split_clusters = clusters
 
@@ -1049,9 +1011,6 @@ class Forest:
         highlight = np.ones(combined_coordinates.shape[0]) * 10
         highlight[len(self.sample_labels):] = [len(cluster.samples)
                                                for cluster in self.sample_clusters]
-        # for i,cluster in enumerate(self.sample_clusters):
-        #
-        #     highlight[self.counts.shape[0] + i:] = len(cluster.samples/10)
 
         combined_labels = np.zeros(
             self.output.shape[0] + len(self.sample_clusters))
@@ -1071,7 +1030,6 @@ class Forest:
             for cluster, coordinates in zip(cluster_names, cluster_coordiantes):
                 plt.text(*coordinates, cluster, verticalalignment='center',
                          horizontalalignment='center')
-            # plt.savefig("./tmp.delete.png",dpi=300)
         else:
             f = plt.figure(figsize=(20, 20))
             plt.title("Sample Coordinates")
@@ -1136,8 +1094,6 @@ class Forest:
                 representation.T, metric=metric, method='average'), no_plot=True)['leaves']
             image = representation[agg_f].T[agg_s].T
         else:
-            # feature_order = dendrogram(linkage(reduction.T+1,metric='cosine',method='average'),no_plot=True)['leaves']
-            # image = reduction[split_order].T[feature_order].T
             try:
                 agg_f = dendrogram(linkage(
                     representation.T, metric='cosine', method='average'), no_plot=True)['leaves']
@@ -1329,36 +1285,26 @@ class Forest:
         f = self.plot_sample_clusters()
 
         def recursive_tree_plot(parent, children, figure, level=0):
-            # print("Recursion debug")
-            # print(f"p:{parent}")
-            # print(f"c:{children}")
             pc = self.split_clusters[parent].coordinates()
             vectors = []
             for child, sub_children in children:
                 if child == len(self.split_clusters):
                     continue
                 cc = self.split_clusters[child].coordinates()
-                # print("coordinates")
-                # print(f"p{parent}:{pc}")
-                # print(f"c{child}:{cc}")
-                # v = pc - cc
                 v = cc - pc
-                # print(f"v:{v}")
                 plt.figure(figure.number)
-                # plt.arrow(pc[0],pc[1],v[0],v[1],width=(depth+1-level)*.3,length_includes_head=True)
                 plt.arrow(pc[0], pc[1], v[0], v[1], length_includes_head=True)
                 vectors.append((pc, v))
                 figure, cv = recursive_tree_plot(
                     child, sub_children, figure, level=level + 1)
                 vectors.extend(cv)
-            # print("===============")
             return figure, vectors
 
         f, v = recursive_tree_plot(self.likely_tree[0], self.likely_tree[1], f)
-        #
-        # plt.savefig("./tmp.delete.png",dpi=300)
-        #
-        # return f,v
+
+        plt.savefig("./tmp.delete.png",dpi=300)
+
+        return f,v
 
     def plot_braid_vectors(self):
 
@@ -1431,25 +1377,6 @@ class Forest:
 
         return upstream_frequency, downstream_frequency
 
-    # def conditional_split_probability(self):
-    #
-    #     _, down_matrix = self.directional_matrix()
-    #     total_descendents = np.sum(down_matrix, axis=1)
-    #     conditional_probability = (down_matrix.T / (total_descendents + 1)).T
-    #
-    #     return conditional_probability
-
-    # def probability_enrichment(self):
-    #
-    #     _, down_matrix = self.directional_matrix()
-    #     total_descendents = np.sum(down_matrix, axis=1)
-    #     conditional_probability = (down_matrix.T / (total_descendents + 1)).T
-    #
-    #     raw_probability = conditional_probability[0]
-    #     enrichment = conditional_probability / raw_probability
-    #
-    #     return enrichment
-
 
 
     def path_matrix(self,nodes=None):
@@ -1461,8 +1388,6 @@ class Forest:
         for node in nodes:
             if hasattr(node, 'split_cluster'):
                 mtx[node.split_cluster, node.index] = True
-                # for descendant in node.nodes():
-                #     mtx[node.split_cluster, descendant.index] = True
 
         return mtx
 
@@ -1470,7 +1395,6 @@ class Forest:
         path_matrix = self.path_matrix()
         path_covariance = np.cov(path_matrix)
         precision = np.linalg.pinv(path_covariance)
-    #     return precision
 
         precision_normalization = np.sqrt(
             np.outer(np.diag(precision), np.diag(precision)))
@@ -1595,22 +1519,15 @@ class Forest:
             mean_matrix = self.split_cluster_mean_matrix()
             domain_matrix = self.split_cluster_domain_mean_matrix()
             distances = 1. - cdist(mean_matrix, domain_matrix, metric="cosine")
-            # distances = squareform(1. - pdist(mean_matrix,domain_matrix,metric="cosine"))
         elif mode == "samples":
             cluster_values = np.array([c.sample_scores()
                                        for c in self.split_clusters])
             parent_values = np.array([c.parent_scores() for c in self.split_clusters])
-            # cluster_values = np.array([np.abs(c.sister_scores())
-            #                            for c in self.split_clusters])
-            # parent_values = np.array([c.parent_scores() for c in self.split_clusters])
 
             normed_cv = cluster_values / np.sum(cluster_values,axis=0)
             normed_pv = parent_values / np.sum(parent_values,axis=0)
             distances = 1. - cdist(normed_cv,normed_pv,metric='cosine')
 
-            # distances = 1. - cdist(parent_values,cluster_values,metric='cosine')
-            # distances = 1. - cdist(cluster_values,sister_values,metric='cosine')
-            # distances = squareform(1. - pdist(cluster_values, metric="cosine"))
         else:
             raise Exception(f"Not a valid mode: {mode}")
 
@@ -1626,8 +1543,6 @@ class Forest:
         print(mst)
 
         def finite_tree(cluster, available):
-            # print(cluster)
-            # print(mst[cluster])
             children = []
             try:
                 available.remove(cluster)
@@ -1671,8 +1586,6 @@ class Forest:
             n = max(int(self.output.shape[1] / 2), 1)
 
         if output is None:
-            # tmp_dir = tmp.TemporaryDirectory()
-            # html_location = location = tmp_dir.name + "/"
             location = self.location()
             html_location = self.html_directory()
             rmtree(html_location)
@@ -1725,15 +1638,10 @@ class Forest:
                     child_width += cw
                 if child_width == 0:
                     child_width = width
-                # print("Recursive tree debug")
-                # print(f"x:{x},y:{y}")
-                # print(f"{tree[0]}")
-                # print(f"cw:{child_width}")
 
                 # We have to place the current leaf at the average position of all leaves below
                 padding = (child_width - width) / 2
                 coordinates = [x + padding + (width * .5), y + (height * .5)]
-                # print(f"coordinates:{coordinates}")
 
                 child_coordinates.append([int(tree[0]), coordinates])
 
@@ -1827,12 +1735,6 @@ class Forest:
                             cx, cy = coordinates[1:][j][1]
                             child_center_x = cx + (width / 2)
                             child_center_y = cy + (height / 2)
-
-                            # And plot a line with a weight equivalent to the number of transitions
-
-                            # cp = self.split_cluster_transitions[i,j]
-                            # total = np.sum(self.split_cluster_transitions[i])
-                            # arrow_canvas.plot([center_x,child_center_x],[center_y,child_center_y],alpha=min(1,cp/total*2),linewidth=(cp**2)*.01,transform=arrow_canvas.transAxes)
 
                             # Alternatively, plot a line with a weight equivalent to the partial correlation of split clusters:
 
