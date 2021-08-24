@@ -13,9 +13,10 @@ import subprocess as sp
 import rusty_axe.tree_reader as tr
 
 
-bin_path = os.path.join("bin","rf_5")
+bin_path = os.path.join("bin", "rf_5")
 RUST_PATH = str((Path(__file__).parent /
-                    bin_path).resolve())
+                 bin_path).resolve())
+
 
 def main(location, input, output=None, ifh=None, ofh=None, **kwargs):
     if output is None:
@@ -49,7 +50,6 @@ def save_trees(location, input_counts, output_counts=None, ifh=None, ofh=None, h
     np.savetxt(location + "input.counts", input_counts)
     np.savetxt(location + "output.counts", output_counts)
 
-
     if ifh is None:
         np.savetxt(location + "tmp.ifh",
                    np.arange(input_counts.shape[1], dtype=int), fmt='%u')
@@ -66,11 +66,13 @@ def save_trees(location, input_counts, output_counts=None, ifh=None, ofh=None, h
 
     return inner_fit(input_counts, output_counts, location, ifh=(location + "tmp.ifh"), ofh=(location + "tmp.ofh"), lrg_mem=lrg_mem, **kwargs)
 
+
 def load(location):
     # Alias to the tree reader load
     return tr.Forest.load(location)
 
-def fit(input_counts, cache = True, output_counts=None, ifh=None, ofh=None, header=None, backtrace=False, lrg_mem=None, location=None, **kwargs):
+
+def fit(input_counts, cache=True, output_counts=None, ifh=None, ofh=None, header=None, backtrace=False, lrg_mem=None, location=None, **kwargs):
 
     if output_counts is None:
         output_counts = input_counts
@@ -118,24 +120,25 @@ def inner_fit(input_counts, output_counts, location, backtrace=False, lrg_mem=No
 
     print("Command: " + " ".join(arg_list))
 
-    with sp.Popen(arg_list, stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.PIPE,universal_newlines=True) as cp:
+    with sp.Popen(arg_list, stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.PIPE, universal_newlines=True) as cp:
         tree_count = 0
         while True:
             rc = cp.poll()
             if rc is not None:
-                print(cp.stdout.read(),end='')
-                print(cp.stderr.read(),end='')
+                print(cp.stdout.read(), end='')
+                print(cp.stderr.read(), end='')
                 break
             output = cp.stdout.readline()
             if output[:6] == "Ingest":
-                print(output.rstrip(),end="\r")
+                print(output.rstrip(), end="\r")
             elif output[:9] == "Computing":
                 tree_count += 1
-                print(f"Computing tree {tree_count}",end='\r')
+                print(f"Computing tree {tree_count}", end='\r')
             else:
                 print(output)
 
     return arg_list
+
 
 if __name__ == "__main__":
     kwargs = {x.split("=")[0]: x.split("=")[1] for x in sys.argv[3:]}

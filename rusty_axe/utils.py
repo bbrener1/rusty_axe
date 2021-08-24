@@ -53,7 +53,8 @@ def hacked_louvain(knn, resolution=1):
     print("Louvain: {}".format(clustering.shape))
     return clustering
 
-def weighted_correlation(x,weights):
+
+def weighted_correlation(x, weights):
 
     weighted_covariance = np.cov(x, fweights=weights)
     diagonal = np.diag(weighted_covariance)
@@ -111,10 +112,11 @@ def count_list_elements(elements):
         dict[element] += 1
     return dict
 
+
 def generate_feature_value_html(features, values, normalization=None, cmap=None):
 
     col_header = ["Features", "Values"]
-    values = np.around(list(values), decimals = 3)
+    values = np.around(list(values), decimals=3)
 
     mtx = np.array([[str(f) for f in features], [str(v) for v in values]]).T
 
@@ -123,7 +125,7 @@ def generate_feature_value_html(features, values, normalization=None, cmap=None)
     return html
 
 
-def generate_html_table(mtx, row_header = None, col_header = None, colors=None):
+def generate_html_table(mtx, row_header=None, col_header=None, colors=None):
 
     header = []
     rows = []
@@ -135,21 +137,21 @@ def generate_html_table(mtx, row_header = None, col_header = None, colors=None):
             header.append(f'<th scope="col">{header_element}</th>')
 
     if row_header is None:
-        row_header = ["",] * mtx.shape[0]
+        row_header = ["", ] * mtx.shape[0]
     else:
         row_header = [f'<th scope="row">{str(rh)}</th>' for rh in row_header]
 
     if colors is None:
-        colors = np.zeros((*mtx.shape,4))
+        colors = np.zeros((*mtx.shape, 4))
 
-    for row,row_colors,rh in zip(mtx,colors,row_header):
+    for row, row_colors, rh in zip(mtx, colors, row_header):
         row_inner = []
-        for element,c_val in zip(row,row_colors):
-            r,g,b,a = c_val*100
+        for element, c_val in zip(row, row_colors):
+            r, g, b, a = c_val * 100
             a /= 3
             color_tag = f'style="background-color:rgba({r}%,{g}%,{b}%,{a}%);"'
             row_inner.append(f"<td {color_tag}>{element}</td>")
-        row_str = "".join(["<tr>",f"{rh}",*row_inner,"</tr>"])
+        row_str = "".join(["<tr>", f"{rh}", *row_inner, "</tr>"])
         rows.append(row_str)
 
     html_elements = [
@@ -169,16 +171,18 @@ def generate_html_table(mtx, row_header = None, col_header = None, colors=None):
     return "".join(html_elements)
 
 
-def generate_cross_reference_table(mtx,features):
+def generate_cross_reference_table(mtx, features):
 
     # Generate color values
 
     cmap = mpl.cm.get_cmap("bwr")
     colors = cmap(mtx)
 
-    html = generate_html_table(mtx,row_header = features, col_header = features, colors=colors)
+    html = generate_html_table(
+        mtx, row_header=features, col_header=features, colors=colors)
 
     return html
+
 
 def js_wrap(name, content):
     return f"<script> let {name} = {content};</script>"
@@ -203,7 +207,7 @@ This is only guaranteed correct when used with a TRUE METRIC THAT OBEYS THE TRIA
 
 """
 
-    nearest_neighbors = np.zeros((elements.shape[0], k), dtype=int)
+   nearest_neighbors = np.zeros((elements.shape[0], k), dtype=int)
     complete = np.zeros(elements.shape[0], dtype=bool)
 
     neighborhood_size = max(
@@ -222,7 +226,8 @@ This is only guaranteed correct when used with a TRUE METRIC THAT OBEYS THE TRIA
             print(f"Complete:{np.sum(complete)}\r", end='')
 
             if metric == "sister":
-                anchor_distances = sister_distance(elements[anchor].reshape(1,-1),elements)[0]
+                anchor_distances = sister_distance(
+                    elements[anchor].reshape(1, -1), elements)[0]
             else:
                 anchor_distances = cdist(elements[anchor].reshape(
                     1, -1), elements, metric=metric)[0]
@@ -296,7 +301,7 @@ This is fast_knn where we have two sets of elements. The elements are matched (f
 Same rationale as fast_knn: We don't have to compute the whole distance matrix, only small chunks of it.
 """
 
-    if elements1.shape != elements2.shape:
+   if elements1.shape != elements2.shape:
         raise Exception("Average metric knn inputs must be same size")
 
     nearest_neighbors = np.zeros((elements1.shape[0], k), dtype=int)
@@ -376,16 +381,16 @@ Same rationale as fast_knn: We don't have to compute the whole distance matrix, 
 
     return nearest_neighbors
 
-def sister_distance(sisters_1,sisters_2=None):
+def sister_distance(sisters_1, sisters_2=None):
     if sisters_2 is None:
         sisters_2 = sisters_1.copy()
 
     # Compute distances of samples to others using the sister encoding
-    product = np.dot(sisters_1,sisters_2.T)
-    populations_1 = np.sum((sisters_1 != 0).astype(dtype=int),axis=1)
-    populations_2 = np.sum((sisters_2 != 0).astype(dtype=int),axis=1)
-    dot_min = np.zeros((sisters_1.shape[0],sisters_2.shape[0]))
-    dot_max = np.zeros((sisters_1.shape[0],sisters_2.shape[0]))
+    product = np.dot(sisters_1, sisters_2.T)
+    populations_1 = np.sum((sisters_1 != 0).astype(dtype=int), axis=1)
+    populations_2 = np.sum((sisters_2 != 0).astype(dtype=int), axis=1)
+    dot_min = np.zeros((sisters_1.shape[0], sisters_2.shape[0]))
+    dot_max = np.zeros((sisters_1.shape[0], sisters_2.shape[0]))
 
     for i in range(sisters_1.shape[0]):
         dot_min[i] = populations_2
@@ -395,8 +400,7 @@ def sister_distance(sisters_1,sisters_2=None):
 
     product = product + dot_min
 
-    return 1-(product  / (2*dot_max))
-
+    return 1 -(product  / (2*dot_max))
 
 
 def jackknife_variance(values):

@@ -11,6 +11,7 @@ import matplotlib as mpl
 
 DPI_SET = 100
 
+
 class NodeCluster:
 
     def __init__(self, forest, nodes, id):
@@ -163,7 +164,6 @@ class NodeCluster:
             sisters, self.nodes)
         return ordered_features, ordered_difference
 
-
     def coordinates(self, coordinates=None):
 
         if coordinates is None:
@@ -225,7 +225,7 @@ class NodeCluster:
 
     def strict_error_ratio(self):
 
-        self_total_error,parent_total_error = self.raw_error()
+        self_total_error, parent_total_error = self.raw_error()
 
         self_total_error += 1
         parent_total_error += 1
@@ -241,9 +241,9 @@ class NodeCluster:
         return sorted_features, sorted_ratios
 
     def strict_fraction_unexplained(self):
-        self_total_error,parent_total_error = self.raw_error()
+        self_total_error, parent_total_error = self.raw_error()
 
-        return (np.sum(self_total_error) + 1)  / (np.sum(parent_total_error) + 1)
+        return (np.sum(self_total_error) + 1) / (np.sum(parent_total_error) + 1)
 
     def raw_error(self):
         self_total_error = np.zeros(len(self.forest.output_features))
@@ -251,12 +251,11 @@ class NodeCluster:
 
         for node in self.nodes:
             if node.parent is not None:
-                self_error,parent_error = node.squared_residual_doublet()
+                self_error, parent_error = node.squared_residual_doublet()
                 self_total_error += self_error
                 parent_total_error += parent_error
 
-        return self_total_error,parent_total_error
-
+        return self_total_error, parent_total_error
 
     def top_split_features(self, n=10):
         from sklearn.linear_model import LinearRegression
@@ -323,7 +322,7 @@ class NodeCluster:
     def mean_population(self):
         return np.mean([n.pop() for n in self.nodes])
 
-    def important_features(self,n=10,method='mean'):
+    def important_features(self, n=10, method='mean'):
 
         if method == 'mean':
             features, values = self.changed_absolute_sister()
@@ -341,7 +340,7 @@ class NodeCluster:
         important_indices = [
             self.forest.truth_dictionary.feature_dictionary[f] for f in important_features]
 
-        return important_features,important_values,important_indices
+        return important_features, important_values, important_indices
 
     def local_correlations(self, indices=None):
 
@@ -349,12 +348,12 @@ class NodeCluster:
             indices = np.arange(self.forest.output.shape[1])
 
         weights = self.sample_counts()
-        correlations = weighted_correlation(self.forest.output.T[indices],weights=weights)
+        correlations = weighted_correlation(
+            self.forest.output.T[indices], weights=weights)
 
         return correlations
 
-
-    def most_local_correlations_uncorrected(self, n=10,method='mean'):
+    def most_local_correlations_uncorrected(self, n=10, method='mean'):
 
         global_correlations = self.forest.global_correlations()
         local_correlations = self.local_correlations()
@@ -371,14 +370,16 @@ class NodeCluster:
 
         return ranked[-n:]
 
-    def most_local_correlations(self, n=10,method='mean'):
+    def most_local_correlations(self, n=10, method='mean'):
 
-        _,_,important_indices = self.important_features(n=n*10,method=method)
+        _, _, important_indices = self.important_features(
+            n=n * 10, method=method)
 
         # Dedupe
         important_indices = list(set(important_indices))
 
-        global_correlations = self.forest.global_correlations(indices=important_indices)
+        global_correlations = self.forest.global_correlations(
+            indices=important_indices)
         local_correlations = self.local_correlations(indices=important_indices)
 
         delta = np.triu(local_correlations - global_correlations)
@@ -386,10 +387,11 @@ class NodeCluster:
 
         ranks = np.argsort(np.abs(delta.flatten()))
 
-        ranks_j = (ranks%delta.shape[0]).astype(dtype='int')
-        ranks_i = ((ranks -  ranks_j)/delta.shape[1]).astype(dtype='int')
+        ranks_j = (ranks % delta.shape[0]).astype(dtype='int')
+        ranks_i = ((ranks - ranks_j) / delta.shape[1]).astype(dtype='int')
 
-        ranked = list(zip([important_indices[i] for i in ranks_i],[important_indices[j] for j in ranks_j]))
+        ranked = list(zip([important_indices[i] for i in ranks_i], [
+                      important_indices[j] for j in ranks_j]))
 
         return ranked[-n:]
 
@@ -403,9 +405,11 @@ class NodeCluster:
 
     def parent_scores(self):
         if len(self.parents()) > 0:
-            parent_encoding = self.forest.node_representation(self.parents(),mode='sample')
+            parent_encoding = self.forest.node_representation(
+                self.parents(), mode='sample')
         else:
-            parent_encoding = self.forest.node_representation(self.nodes,mode='sample')
+            parent_encoding = self.forest.node_representation(
+                self.nodes, mode='sample')
         return np.sum(parent_encoding, axis=0) / (parent_encoding.shape[0] + 1)
 
     def sample_counts(self):
@@ -422,13 +426,14 @@ class NodeCluster:
                                                   np.sum(sister_encoding, axis=1))) / own_encoding.shape[1]
         return scores
 
-    def log_sister_scores(self,prior=1):
+    def log_sister_scores(self, prior=1):
         own = self.nodes
         sisters = self.sisters()
         own_encoding = self.forest.node_sample_encoding(own).astype(dtype=int)
         sister_encoding = self.forest.node_sample_encoding(
             sisters).astype(dtype=int)
-        ratio = (np.sum(own_encoding,axis=1) + prior) / (np.sum(sister_encoding,axis=1) + prior)
+        ratio = (np.sum(own_encoding, axis=1) + prior) / \
+            (np.sum(sister_encoding, axis=1) + prior)
 
         return np.log(ratio)
 
@@ -449,8 +454,7 @@ class NodeCluster:
 
         return scores
 
-
-    def predict_log_sister_scores(self, node_sample_encoding,prior=1):
+    def predict_log_sister_scores(self, node_sample_encoding, prior=1):
         own_nodes = self.nodes
         own_mask = np.zeros(node_sample_encoding.shape[0], dtype=bool)
         own_mask[[n.index for n in own_nodes]] = True
@@ -462,7 +466,8 @@ class NodeCluster:
         own_encoding = node_sample_encoding[own_mask]
         sister_encoding = node_sample_encoding[sister_mask]
 
-        ratio = (np.sum(own_encoding,axis=1) + prior) / (np.sum(sister_encoding,axis=1) + prior)
+        ratio = (np.sum(own_encoding, axis=1) + prior) / \
+            (np.sum(sister_encoding, axis=1) + prior)
 
         return np.log(ratio)
 
@@ -504,7 +509,7 @@ class NodeCluster:
         probability_enrichment = [(self.forest.split_clusters[i].name(), enrichment) for (
             i, enrichment) in enumerate(probability_enrichment)]
 
-        local_cross_html,global_cross_html = self.html_cross_reference(n=n)
+        local_cross_html, global_cross_html = self.html_cross_reference(n=n)
 
         attributes['clusterName'] = str(self.name())
         attributes['clusterId'] = int(self.id)
@@ -544,36 +549,39 @@ class NodeCluster:
 
         return jsn_dumps(attributes)
 
-    def top_local_table(self,n):
+    def top_local_table(self, n):
         # changed_vs_sister, fold_vs_sister = self.changed_absolute_sister()
-        important_features, important_folds, important_indices = self.important_features(n)
+        important_features, important_folds, important_indices = self.important_features(
+            n)
 
         selected_local = self.local_correlations(indices=important_indices)
 
-        selected_local = np.around(selected_local,decimals=3)
+        selected_local = np.around(selected_local, decimals=3)
 
-        return selected_local,important_features
+        return selected_local, important_features
 
-    def top_global_table(self,n):
+    def top_global_table(self, n):
         changed_vs_sister, fold_vs_sister = self.changed_absolute_sister()
-        important_features, important_folds, important_indices = self.important_features(n)
-        selected_global = self.forest.global_correlations(indices=important_indices)
+        important_features, important_folds, important_indices = self.important_features(
+            n)
+        selected_global = self.forest.global_correlations(
+            indices=important_indices)
 
-        selected_global = np.around(selected_global,decimals=3)
+        selected_global = np.around(selected_global, decimals=3)
 
-        return selected_global,important_features
+        return selected_global, important_features
 
     def top_local(self, n, no_plot=False):
 
         import matplotlib.patheffects as PathEffects
 
-        selected_local,important_features = self.top_local_table(n)
+        selected_local, important_features = self.top_local_table(n)
 
         m = len(important_features)
 
         fig = plt.figure(figsize=(n, n))
         ax = fig.add_axes([0, 0, .8, 1])
-        plt.title(f"Local Correlations in {self.name()}",fontsize=15)
+        plt.title(f"Local Correlations in {self.name()}", fontsize=15)
         im = ax.imshow(selected_local, vmin=-1, vmax=1, cmap='bwr')
         for i in range(m):
             for j in range(m):
@@ -584,8 +592,8 @@ class NodeCluster:
 
         plt.xticks(np.arange(m), labels=important_features, rotation=45)
         plt.yticks(np.arange(m), labels=important_features, rotation=45)
-        cb_ax = fig.add_axes([.85,.1,.1,.8])
-        plt.colorbar(im,cax=cb_ax,label="Weighted Pearson Correlation")
+        cb_ax = fig.add_axes([.85, .1, .1, .8])
+        plt.colorbar(im, cax=cb_ax, label="Weighted Pearson Correlation")
         plt.tight_layout()
         if no_plot:
             return fig
@@ -597,13 +605,13 @@ class NodeCluster:
 
         import matplotlib.patheffects as PathEffects
 
-        selected_global,important_features = self.top_global_table(n)
+        selected_global, important_features = self.top_global_table(n)
 
         m = len(important_features)
 
         fig = plt.figure(figsize=(n, n))
         ax = fig.add_axes([0, 0, .8, 1])
-        plt.title("Global Correlations",fontsize=15)
+        plt.title("Global Correlations", fontsize=15)
         im = ax.imshow(selected_global, vmin=-1, vmax=1, cmap='bwr')
         for i in range(m):
             for j in range(m):
@@ -614,8 +622,8 @@ class NodeCluster:
 
         plt.xticks(np.arange(m), labels=important_features, rotation=45)
         plt.yticks(np.arange(m), labels=important_features, rotation=45)
-        cb_ax = fig.add_axes([.85,.1,.1,.8])
-        plt.colorbar(im,cax=cb_ax,label="Weighted Pearson Correlation")
+        cb_ax = fig.add_axes([.85, .1, .1, .8])
+        plt.colorbar(im, cax=cb_ax, label="Weighted Pearson Correlation")
         plt.tight_layout()
         if no_plot:
             return fig
@@ -639,7 +647,8 @@ class NodeCluster:
 
         print(f"Saving cross ref to {location}")
 
-        local_cross.savefig(location + "local_cross.png", bbox_inches='tight', dpi=DPI_SET)
+        local_cross.savefig(location + "local_cross.png",
+                            bbox_inches='tight', dpi=DPI_SET)
         global_cross.savefig(
             location + "global_cross.png", bbox_inches='tight', dpi=DPI_SET)
 
@@ -713,7 +722,7 @@ class NodeCluster:
         plt.colorbar(label="Sister Score (Difference in Probability)")
         plt.ylabel("tSNE Coordinates (AU)")
         plt.xlabel("tSNE Coordinates (AU)")
-        plt.savefig(location + "sister_map.png",dpi=DPI_SET)
+        plt.savefig(location + "sister_map.png", dpi=DPI_SET)
 
         html = f'<img class="sister_score" src="{location + "sister_map.png"}" />'
 
@@ -768,7 +777,7 @@ class NodeCluster:
         plt.colorbar()
         plt.show()
 
-    def plot_sister_scores(self,**kwargs):
+    def plot_sister_scores(self, **kwargs):
         sister_scores = self.sister_scores()
         forest_coordinates = self.forest.coordinates(no_plot=True)
         fig = plt.figure()

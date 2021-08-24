@@ -1,5 +1,5 @@
 
-from rusty_axe.utils import fast_knn, double_fast_knn, hacked_louvain, generate_feature_value_html,sister_distance
+from rusty_axe.utils import fast_knn, double_fast_knn, hacked_louvain, generate_feature_value_html, sister_distance
 from rusty_axe.node import Node, Reduction, Filter
 from rusty_axe.prediction import Prediction
 from rusty_axe.sample_cluster import SampleCluster
@@ -79,7 +79,7 @@ class Forest:
             node.index = i
 
         if split_labels is not None:
-            self.external_split_labels(self.nodes(),split_labels,roots=True)
+            self.external_split_labels(self.nodes(), split_labels, roots=True)
 
 ########################################################################
 ########################################################################
@@ -89,11 +89,10 @@ class Forest:
 ########################################################################
 ########################################################################
 
-
     # A method that allows one to summon a multiprocessing pool general to the forest
 
     def pool(self):
-        if hasattr(self,'pool'):
+        if hasattr(self, 'pool'):
             if self.pool_object is not None:
                 return self.pool_object
 
@@ -129,11 +128,11 @@ class Forest:
 
     def reindex_nodes(self):
         nodes = self.nodes()
-        for i,node in enumerate(nodes):
+        for i, node in enumerate(nodes):
             node.index = i
 
-    def reindex_samples(self,samples):
-        map = {s:i for i,s in list(enumerate(samples))}
+    def reindex_samples(self, samples):
+        map = {s: i for i, s in list(enumerate(samples))}
         for node in self.nodes():
             if node.local_samples is not None:
                 new_samples = [map[s] for s in node.local_samples]
@@ -162,10 +161,10 @@ class Forest:
     def roots(self):
         return [tree.root for tree in self.trees]
 
-    def trim(self,limit):
+    def trim(self, limit):
 
-        for i,tree in enumerate(self.trees):
-            print(f"Trimming {i}\r",end='')
+        for i, tree in enumerate(self.trees):
+            print(f"Trimming {i}\r", end='')
             tree.trim(limit)
         print("")
 
@@ -190,7 +189,6 @@ class Forest:
 
 ########################################################################
 ########################################################################
-
 
     def node_representation(self, nodes=None, mode='additive_mean', metric=None, pca=0):
         from sklearn.decomposition import IncrementalPCA
@@ -284,16 +282,15 @@ class Forest:
             encoding[:, i] = node.encoding()
         return encoding
 
-    def node_factor_encoding(self,nodes):
+    def node_factor_encoding(self, nodes):
 
-        encoding = np.zeros((len(nodes),len(self.split_clusters)),dtype=bool)
+        encoding = np.zeros((len(nodes), len(self.split_clusters)), dtype=bool)
 
-        for i,factor in enumerate(self.split_clusters):
+        for i, factor in enumerate(self.split_clusters):
             mask = factor.node_mask()
-            encoding[:,i][mask] = True
+            encoding[:, i][mask] = True
 
         return encoding
-
 
     def node_sister_encoding(self, nodes):
         encoding = np.zeros((len(self.samples), len(nodes)), dtype=int)
@@ -333,7 +330,7 @@ class Forest:
             gains[:, i] = node.additive_mean_gains()
         return gains
 
-    def conditional_gain_matrix(self,nodes):
+    def conditional_gain_matrix(self, nodes):
         return self.mean_additive_matrix(nodes)
 
     def mean_matrix(self, nodes):
@@ -345,8 +342,8 @@ class Forest:
     def median_matrix(self, nodes):
         predictions = np.zeros((len(nodes), len(self.output_features)))
         for i, node in enumerate(nodes):
-            if i%10 == 0:
-                print(f"Estimating node {i}\r",end='')
+            if i % 10 == 0:
+                print(f"Estimating node {i}\r", end='')
             predictions[i] = node.medians()
         return predictions
 
@@ -356,20 +353,20 @@ class Forest:
             weights[i] = node.weights
         return weights
 
-    def partial_matrix(self,nodes):
-        partials = np.zeros((len(nodes),len(self.output_features)))
+    def partial_matrix(self, nodes):
+        partials = np.zeros((len(nodes), len(self.output_features)))
         for i, node in enumerate(nodes):
-            if i%1000 == 0:
-                print(f"Node {i}\r",end='')
+            if i % 1000 == 0:
+                print(f"Node {i}\r", end='')
             partials[i] = node.partials()
         print("")
         return partials
 
-    def partial_absolute(self,nodes):
-        partials = np.zeros((len(nodes),len(self.output_features)))
+    def partial_absolute(self, nodes):
+        partials = np.zeros((len(nodes), len(self.output_features)))
         for i, node in enumerate(nodes):
-            if i%1000 == 0:
-                print(f"Node {i}\r",end='')
+            if i % 1000 == 0:
+                print(f"Node {i}\r", end='')
             partials[i] = node.absolute_partials()
         print("")
         return partials
@@ -430,7 +427,7 @@ class Forest:
 
         trees = []
         for tree_file in combined_tree_files:
-            print(f"Loading {tree_file}\r",end='')
+            print(f"Loading {tree_file}\r", end='')
             trees.append(
                 Tree(json.load(open(tree_file.strip())), first_forest))
 
@@ -451,18 +448,19 @@ class Forest:
 
     def from_sklearn(forest):
 
-
         raw_trees = [e.tree_ for e in forest.estimators_]
 
         trees = []
 
-        def node_recursion(index,children_left,children_right):
+        def node_recursion(index, children_left, children_right):
             nodes = []
             left_child = children_left[index]
             right_child = children_right[index]
             if left_child > 0 and right_child > 0:
-                nodes.extend(node_recursion(left_child,children_left,children_right))
-                nodes.extend(node_recursion(right_child,children_left,children_right))
+                nodes.extend(node_recursion(
+                    left_child, children_left, children_right))
+                nodes.extend(node_recursion(
+                    right_child, children_left, children_right))
                 nodes.append(left_child)
                 nodes.append(right_child)
             return nodes
@@ -470,26 +468,26 @@ class Forest:
         for raw_tree in raw_trees:
             children_left = raw_tree.children_left
             children_right = raw_tree.children_right
-            nodes = node_recursion(0,children_left,children_right)
+            nodes = node_recursion(0, children_left, children_right)
             trees.append(nodes)
 
         return trees
-
 
     def from_sklearn(forest):
 
-
         raw_trees = [e.tree_ for e in forest.estimators_]
 
         trees = []
 
-        def node_recursion(index,children_left,children_right):
+        def node_recursion(index, children_left, children_right):
             nodes = []
             left_child = children_left[index]
             right_child = children_right[index]
             if left_child > 0 and right_child > 0:
-                nodes.extend(node_recursion(left_child,children_left,children_right))
-                nodes.extend(node_recursion(right_child,children_left,children_right))
+                nodes.extend(node_recursion(
+                    left_child, children_left, children_right))
+                nodes.extend(node_recursion(
+                    right_child, children_left, children_right))
                 nodes.append(left_child)
                 nodes.append(right_child)
             return nodes
@@ -497,16 +495,16 @@ class Forest:
         for raw_tree in raw_trees:
             children_left = raw_tree.children_left
             children_right = raw_tree.children_right
-            nodes = node_recursion(0,children_left,children_right)
+            nodes = node_recursion(0, children_left, children_right)
             trees.append(nodes)
 
         return trees
 
-    def derive_samples(self,samples):
+    def derive_samples(self, samples):
 
         new_trees = []
 
-        for i,tree in enumerate(self.trees):
+        for i, tree in enumerate(self.trees):
             print(f"Deriving tree {i}")
             new_trees.append(tree.derive_samples(samples))
 
@@ -514,8 +512,8 @@ class Forest:
             new_trees,
             copy.deepcopy(self.input[samples]),
             copy.deepcopy(self.output[samples]),
-            input_features = copy.deepcopy(self.input_features),
-            output_features = copy.deepcopy(self.output_features),
+            input_features=copy.deepcopy(self.input_features),
+            output_features=copy.deepcopy(self.output_features),
             samples=list(np.array(self.samples)[samples]),
             split_labels=None,
             cache=self.cache
@@ -528,7 +526,8 @@ class Forest:
             node.forest = new_forest
 
         split_labels = [n.split_cluster for n in new_forest.nodes()]
-        new_forest.external_split_labels(new_forest.nodes(),split_labels,roots=True)
+        new_forest.external_split_labels(
+            new_forest.nodes(), split_labels, roots=True)
 
         new_forest.reindex_samples(samples)
 
@@ -536,15 +535,14 @@ class Forest:
 
         return new_forest
 
-
     def set_cache(self, value):
         self.cache = value
         for node in self.nodes():
             node.cache = value
 
     def compute_cache(self):
-        for i,tree in enumerate(self.trees):
-            print(f"Tree {i}",end='\r')
+        for i, tree in enumerate(self.trees):
+            print(f"Tree {i}", end='\r')
             tree.root.compute_cache()
         print("")
 
@@ -1133,7 +1131,6 @@ class Forest:
                 coordinates[i, j] = sample_cluster.feature_mean(feature)
         return coordinates
 
-
     def factor_partial_matrix(self, features=None):
         if features is None:
             coordinates = np.zeros(
@@ -1302,9 +1299,9 @@ class Forest:
 
         f, v = recursive_tree_plot(self.likely_tree[0], self.likely_tree[1], f)
 
-        plt.savefig("./tmp.delete.png",dpi=300)
+        plt.savefig("./tmp.delete.png", dpi=300)
 
-        return f,v
+        return f, v
 
     def plot_braid_vectors(self):
 
@@ -1326,6 +1323,7 @@ class Forest:
 
 ########################################################################
 ########################################################################
+
 
     def split_cluster_transition_matrix(self, depth=3):
 
@@ -1377,9 +1375,7 @@ class Forest:
 
         return upstream_frequency, downstream_frequency
 
-
-
-    def path_matrix(self,nodes=None):
+    def path_matrix(self, nodes=None):
 
         if nodes is None:
             nodes = self.nodes()
@@ -1522,11 +1518,12 @@ class Forest:
         elif mode == "samples":
             cluster_values = np.array([c.sample_scores()
                                        for c in self.split_clusters])
-            parent_values = np.array([c.parent_scores() for c in self.split_clusters])
+            parent_values = np.array([c.parent_scores()
+                                      for c in self.split_clusters])
 
-            normed_cv = cluster_values / np.sum(cluster_values,axis=0)
-            normed_pv = parent_values / np.sum(parent_values,axis=0)
-            distances = 1. - cdist(normed_cv,normed_pv,metric='cosine')
+            normed_cv = cluster_values / np.sum(cluster_values, axis=0)
+            normed_pv = parent_values / np.sum(parent_values, axis=0)
+            distances = 1. - cdist(normed_cv, normed_pv, metric='cosine')
 
         else:
             raise Exception(f"Not a valid mode: {mode}")
@@ -1567,6 +1564,7 @@ class Forest:
 # HTML Visualization methods
 #########################################################
 
+
     def html_directory(self):
 
         location = Path(__file__).parent.absolute()
@@ -1596,7 +1594,8 @@ class Forest:
 
         for split_cluster in self.split_clusters:
             print(f"Summarizing:{split_cluster.name()}")
-            split_cluster.html_cluster_summary(n=n, plot=False, output=html_location+str(split_cluster.id)+"/")
+            split_cluster.html_cluster_summary(
+                n=n, plot=False, output=html_location + str(split_cluster.id) + "/")
 
         copyfile(location + "/tree_template.html",
                  html_location + "tree_template.html")
@@ -1763,7 +1762,8 @@ class Forest:
         try:
             run(["open", html_location + "tree_template.html"])
         except:
-            print(f"Stored the html report at {html_location}, but could not open from command line")
+            print(
+                f"Stored the html report at {html_location}, but could not open from command line")
 
     def split_cluster_leaves(self):
         def tree_leaves(tree):
@@ -1803,8 +1803,7 @@ class Forest:
             matrix[:, i] = cluster.sister_scores()
         return matrix
 
-
-    def global_correlations(self,indices=None):
+    def global_correlations(self, indices=None):
 
         if indices is None:
             indices = np.arange(self.output.shape[1])

@@ -2,9 +2,10 @@ from rusty_axe.node import Node
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from copy import copy,deepcopy
+from copy import copy, deepcopy
 
 mpl.rcParams['figure.dpi'] = 100
+
 
 class Tree:
 
@@ -45,11 +46,11 @@ class Tree:
         else:
             return self
 
-    def trim(self,limit):
+    def trim(self, limit):
         for child in self.root.children:
             child.trim(limit)
 
-    def derive_samples(self,samples):
+    def derive_samples(self, samples):
         root_copy = self.root.derive_samples(samples)
         self_copy = self.derived_copy()
         self_copy.root = root_copy
