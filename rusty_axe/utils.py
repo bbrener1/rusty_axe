@@ -207,7 +207,7 @@ def fast_knn(elements, k, neighborhood_fraction=.01, metric='euclidean'):
 
     """
 
-   nearest_neighbors = np.zeros((elements.shape[0], k), dtype=int)
+    nearest_neighbors = np.zeros((elements.shape[0], k), dtype=int)
     complete = np.zeros(elements.shape[0], dtype=bool)
 
     neighborhood_size = max(
