@@ -301,7 +301,7 @@ def double_fast_knn(elements1, elements2, k, neighborhood_fraction=.01, metric='
     Same rationale as fast_knn: We don't have to compute the whole distance matrix, only small chunks of it.
     """
 
-   if elements1.shape != elements2.shape:
+    if elements1.shape != elements2.shape:
         raise Exception("Average metric knn inputs must be same size")
 
     nearest_neighbors = np.zeros((elements1.shape[0], k), dtype=int)
