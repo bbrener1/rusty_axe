@@ -191,21 +191,21 @@ def js_wrap(name, content):
 def fast_knn(elements, k, neighborhood_fraction=.01, metric='euclidean'):
 
 
-"""
-Finds the indices of k nearest neighbors for each sample in a matrix, using any of the standard scipy distance metrics.
+    """
+    Finds the indices of k nearest neighbors for each sample in a matrix, using any of the standard scipy distance metrics.
 
-Arguments:
-Elements: NxM matrix of N elements, M features. This is the thing we are giving you k-nearest-neighbors of.
-k: uint < N. The number of nearest neighbors to find.
-Neighborhood fraction: don't worry about it. (The number of fragments that the input is divided into to evaluate the triangle inequality. For REALLY huge inputs try setting it lower, like .001)
+    Arguments:
+    Elements: NxM matrix of N elements, M features. This is the thing we are giving you k-nearest-neighbors of.
+    k: uint < N. The number of nearest neighbors to find.
+    Neighborhood fraction: don't worry about it. (The number of fragments that the input is divided into to evaluate the triangle inequality. For REALLY huge inputs try setting it lower, like .001)
 
-What's so special about this function? Isn't there a builtin that does this? Yes. This function is special because it does not have to compute the entire pairwise distance matrix between each element in elements and each other element. For large numbers of elements this saves time and space.
+    What's so special about this function? Isn't there a builtin that does this? Yes. This function is special because it does not have to compute the entire pairwise distance matrix between each element in elements and each other element. For large numbers of elements this saves time and space.
 
-This is only guaranteed correct when used with a TRUE METRIC THAT OBEYS THE TRIANGLE INEQUALITY
+    This is only guaranteed correct when used with a TRUE METRIC THAT OBEYS THE TRIANGLE INEQUALITY
 
-(but realistically it works sort of ok even if that's not true)
+    (but realistically it works sort of ok even if that's not true)
 
-"""
+    """
 
    nearest_neighbors = np.zeros((elements.shape[0], k), dtype=int)
     complete = np.zeros(elements.shape[0], dtype=bool)
@@ -293,13 +293,13 @@ This is only guaranteed correct when used with a TRUE METRIC THAT OBEYS THE TRIA
 
 def double_fast_knn(elements1, elements2, k, neighborhood_fraction=.01, metric='cosine'):
 
-"""
-See also fast_knn
+    """
+    See also fast_knn
 
-This is fast_knn where we have two sets of elements. The elements are matched (for nodes each element in set 2 is a sister of the node in set 1). We use it when we wish to find a KNN where the average of the two sets of distances is used. This is useful for incorporating the relatives of nodes when computing a KNNfor node clustering. Why not simply find the average of the two matrices?
+    This is fast_knn where we have two sets of elements. The elements are matched (for nodes each element in set 2 is a sister of the node in set 1). We use it when we wish to find a KNN where the average of the two sets of distances is used. This is useful for incorporating the relatives of nodes when computing a KNNfor node clustering. Why not simply find the average of the two matrices?
 
-Same rationale as fast_knn: We don't have to compute the whole distance matrix, only small chunks of it.
-"""
+    Same rationale as fast_knn: We don't have to compute the whole distance matrix, only small chunks of it.
+    """
 
    if elements1.shape != elements2.shape:
         raise Exception("Average metric knn inputs must be same size")
