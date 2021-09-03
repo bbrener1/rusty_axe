@@ -604,31 +604,26 @@ class Node:
         for child in self.children:
             child.trim(limit)
 
+    def predict_matrix_encoding(self,matrix):
+        index_list = self.predict_matrix_indices(matrix)
+        encoding = np.zeros((len(index_list),matrix.shape[0]),dtype=bool)
+        for i,e in enumerate(index_list):
+            encoding[i][e] = True
+        return encoding.T
 
 
-    def predict_matrix_encoding(self, matrix, indices=None):
+    def predict_matrix_indices(self, matrix, indices=None):
         encoded_indices = []
         if indices is None:
             indices = np.arange(matrix.shape[0])
         own_mask = self.filter.filter_matrix(matrix)
         if np.sum(own_mask) > 0:
             for child in self.children:
-                child_indices = child.predict_matrix_encoding(
+                child_indices = child.predict_matrix_indices(
                     matrix[own_mask],indices = indices[own_mask])
                 encoded_indices.extend(child_indices)
-            for child in self.children:
-                expanded_encoding = np.zeros((1, matrix.shape[0]), dtype=bool)
-                expanded_encoding[0][own_mask] = child.filter.filter_matrix(
-                    matrix[own_mask])
-                encodings.append(expanded_encoding)
-        else:
-            encodings = [
-                np.zeros((len(self.nodes()), matrix.shape[0]), dtype=bool), ]
-        if len(encodings) > 0:
-            combined_encoding = np.vstack(encodings)
-        else:
-            combined_encoding = np.zeros((0, matrix.shape[0]), dtype=bool)
-        return combined_encoding
+        encoded_indices.append(indices[own_mask])
+        return encoded_indices
 
     def add_child_cluster(self, cluster, lr):
 
