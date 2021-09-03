@@ -38,7 +38,9 @@ def main(location, input, output=None, ifh=None, ofh=None, **kwargs):
     print(fit_return)
 
 
-def save_trees(location, input_counts, output_counts=None, ifh=None, ofh=None, header=None, lrg_mem=None, **kwargs):
+def save_trees(location, input_counts, output_counts=None, ifh=None, ofh=None, header=None, lrg_mem=None, unsupervised = "false", **kwargs):
+
+    # This method saves ascii matrices to pass as inputs to the rust fitting procedure.
 
     if output_counts is None:
         output_counts = input_counts
@@ -64,7 +66,7 @@ def save_trees(location, input_counts, output_counts=None, ifh=None, ofh=None, h
 
     print("Generating trees")
 
-    return inner_fit(input_counts, output_counts, location, ifh=(location + "tmp.ifh"), ofh=(location + "tmp.ofh"), lrg_mem=lrg_mem, **kwargs)
+    return inner_fit(location, ifh=(location + "tmp.ifh"), ofh=(location + "tmp.ofh"), lrg_mem=lrg_mem, unsupervised = unsupervised, **kwargs)
 
 
 def load(location):
@@ -74,8 +76,20 @@ def load(location):
 
 def fit(input_counts, cache=True, output_counts=None, ifh=None, ofh=None, header=None, backtrace=False, lrg_mem=None, location=None, **kwargs):
 
+    """
+    Fit a random forest. Start with this function if you are fitting a forest via the API in another python script or notebook.
+
+    Arguments:
+
+    Input_counts: NxM numpy array, rows are samples columns are features.
+    output_counts: Optional second matrix
+    """
+
     if output_counts is None:
         output_counts = input_counts
+        unsupervised = True
+    else:
+        unsupervised = False
 
     tmp_dir = None
     if location is None:
@@ -87,7 +101,7 @@ def fit(input_counts, cache=True, output_counts=None, ifh=None, ofh=None, header
         location = tmp_dir.name + "/"
 
     arguments = save_trees(tmp_dir.name + "/", input_counts=input_counts, output_counts=output_counts,
-                           ifh=ifh, ofh=ofh, header=header, lrg_mem=lrg_mem, **kwargs)
+                           ifh=ifh, ofh=ofh, header=header, lrg_mem=lrg_mem, unsupervised = unsupervised, **kwargs)
 
     forest = tr.Forest.load_from_rust(location, prefix="tmp", ifh="tmp.ifh", ofh="tmp.ofh",
                                       clusters="tmp.clusters", input="input.counts", output="output.counts")
@@ -102,7 +116,18 @@ def fit(input_counts, cache=True, output_counts=None, ifh=None, ofh=None, header
     return forest
 
 
-def inner_fit(input_counts, output_counts, location, backtrace=False, lrg_mem=None, **kwargs):
+def inner_fit(location, backtrace=False, unsupervised = False, lrg_mem = False, **kwargs):
+
+    """
+    This method calls out to rust via cli using files written to disk
+
+    The argument calls for the location of input.counts and output.counts,
+    optionally the backtrace, which determines whether or not Rust backtraces
+    errors.
+
+    The remainder of keyword arguments should be rust keywords. For further details see io.rs in src
+
+    """
 
     print("Running " + RUST_PATH)
 
@@ -117,6 +142,9 @@ def inner_fit(input_counts, output_counts, location, backtrace=False, lrg_mem=No
 
     if lrg_mem is not None:
         arg_list.append("-lrg_mem")
+
+    if unsupervised:
+        arg_list.append("-unsupervised")
 
     print("Command: " + " ".join(arg_list))
 
