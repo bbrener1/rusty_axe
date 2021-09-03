@@ -7,14 +7,8 @@ use std::f64;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
-use std::io::stdin;
-use std::cmp::PartialOrd;
-use std::cmp::Ordering;
 use std::fmt::Debug;
-use std::sync::Arc;
-use rayon::prelude::*;
-use crate::{Feature,Sample};
-use crate::utils::{matrix_flip,mtx_dim,arr_from_vec2};
+use crate::utils::{arr_from_vec2};
 use ndarray::Array2;
 
 //::/ Author: Boris Brenerman
@@ -60,10 +54,8 @@ pub struct Parameters {
     pub reduction: usize,
 
 
-    pub averaging_mode: AveragingMode,
     pub norm_mode: NormMode,
     pub standardize: bool,
-    pub weighing_mode: WeighingMode,
     pub dispersion_mode: DispersionMode,
     pub split_fraction_regularization: f64,
 
@@ -75,7 +67,6 @@ impl Parameters {
         let arg_struct = Parameters {
             auto: false,
             unsupervised: false,
-            // stdin:false,
             input_count_array_file: "".to_string(),
             output_count_array_file: "".to_string(),
             input_feature_header_file: None,
@@ -83,11 +74,6 @@ impl Parameters {
             sample_header_file: None,
             report_address: "./".to_string(),
 
-            // input_array: None,
-            // output_array: None,
-            // input_feature_names: vec![],
-            // output_feature_names: vec![],
-            // sample_names: vec![],
 
             processor_limit: 1,
             parallel_trees: true,
@@ -105,10 +91,8 @@ impl Parameters {
             reduce_output: false,
             reduction: 1,
 
-            averaging_mode: AveragingMode::Arithmetic,
             norm_mode: NormMode::L2,
             standardize: false,
-            weighing_mode: WeighingMode::Flat,
             dispersion_mode: DispersionMode::SSME,
             split_fraction_regularization: 1.,
         };
@@ -123,7 +107,7 @@ impl Parameters {
         let mut continuation_flag = false;
         let mut continuation_argument: String = "".to_string();
 
-        let blank = args.next().unwrap();
+        let _ = args.next().unwrap();
         // eprintln!("Rust observes: {}",blank);
 
         while let Some((i,arg)) = args.enumerate().next() {
@@ -140,22 +124,12 @@ impl Parameters {
                 },
                 "-auto" | "-a"=> {
                     arg_struct.auto = true;
-                //     arg_struct.auto()
                 },
-                // "-stdin" => {
-                //     arg_struct.stdin = true;
-                    // let single_array = Some(read_standard_in());
-                    // arg_struct.input_array = single_array.clone();
-                    // arg_struct.output_array = single_array;
-                // }
                 "-c" | "-counts" => {
                     let single_count_array_file = args.next().expect("Error parsing count location!");
                     arg_struct.unsupervised = true;
                     arg_struct.input_count_array_file = single_count_array_file.clone();
                     arg_struct.output_count_array_file = single_count_array_file;
-                    // let single_array = Some(read_matrix(&single_count_array_file));
-                    // arg_struct.input_array = single_array.clone();
-                    // arg_struct.output_array = single_array;
                 },
                 "-components" => {
                     arg_struct.components = args.next().expect("Error reading components").parse::<usize>().expect("-braid not a number");
@@ -174,16 +148,10 @@ impl Parameters {
                     arg_struct.input_count_array_file = args.next().expect("Failed to retrieve input location");
                     // arg_struct.input_array = Some(read_matrix(&args.next().expect("Error parsing input count location!")));
                 }
-                "-oc" | "-output_counts" | "-output" => {
-                    arg_struct.output_count_array_file = args.next().expect("Failed to retrieve input location");
+                "-oc" | "-output_counts" => {
+                    arg_struct.output_count_array_file = args.next().expect("Failed to retrieve output location");
                     // arg_struct.output_array = Some(read_matrix(&args.next().expect("Error parsing output count location!")));
                 }
-                "-am" | "-averaging_mode" | "-averaging" => {
-                    arg_struct.averaging_mode = AveragingMode::read(&args.next().expect("Error reading averaging mode"));
-                }
-                "-wm" | "-w" | "-weighing_mode" => {
-                    arg_struct.weighing_mode = WeighingMode::read(&args.next().expect("Failed to read weighing mode!"));
-                },
                 "-dm" | "-dispersion_mode" => {
                     arg_struct.dispersion_mode = DispersionMode::read(&args.next().expect("Failed to read split mode"));
                 },
@@ -193,7 +161,7 @@ impl Parameters {
                 "-n" | "-norm" | "-norm_mode" => {
                     arg_struct.norm_mode = NormMode::read(&args.next().expect("Failed to read norm mode"));
                 },
-                "-std" | "-s" | "-standardize" | "-standardized" => {
+                "-std" | "-standardize" | "-standardized" => {
                     arg_struct.standardize = args.next().unwrap().parse::<bool>().expect("Error parsing std argument");
                     // arg_struct.standardize = true;
                 }
@@ -225,17 +193,11 @@ impl Parameters {
                 },
                 "-h" | "-header" => {
                     let header_file = args.next().expect("Error processing feature file");
-                    let header = read_header(&header_file);
-
                     arg_struct.input_feature_header_file = Some(header_file.clone());
                     arg_struct.output_feature_header_file = Some(header_file);
-
-                    // arg_struct.input_feature_names = header.clone();
-                    // arg_struct.output_feature_names = header;
                 },
                 "-s" | "-samples" => {
                     arg_struct.sample_header_file = Some(args.next().expect("Error processing feature file"));
-                    // arg_struct.sample_names = read_sample_names(arg_struct.sample_header_file.as_ref().unwrap());
                 }
                 "-l" | "-leaves" => {
                     arg_struct.leaf_size_cutoff = args.next().expect("Error processing leaf limit").parse::<usize>().expect("Error parsing leaf limit");
@@ -274,33 +236,12 @@ impl Parameters {
                         // }
                     }
                     else if !supress_warnings {
-                        // eprintln!("Warning, detected unexpected argument:{}. Ignoring, press enter to continue, or CTRL-C to stop. Were you trying to input multiple arguments? Only some options take multiple arguments. Watch out for globs(*, also known as wild cards), these count as multiple arguments!",arg);
-                        // stdin().read_line(&mut String::new());
-                        panic!(format!("Unexpected argument:{}",arg));
+                        panic!("Unexpected argument:{}",arg);
                     }
                 }
 
             }
         }
-
-        // assert!(arg_struct.input_array.as_ref().expect("Please specify input file").get(0).expect("Empty input!").len() == arg_struct.output_array.as_ref().expect("Please specify output file").get(0).expect("Empty output!").len(), "Unequal dimensions in input and output!");
-
-        // if arg_struct.input_feature_header_file.is_none() {
-        //     let dimensions = mtx_dim(arg_struct.input_array.as_ref().unwrap());
-        //     arg_struct.input_feature_names = (0..dimensions.0).map(|x| x.to_string()).collect()
-        // }
-        // if arg_struct.output_feature_header_file.is_none() {
-        //     let dimensions = mtx_dim(arg_struct.output_array.as_ref().unwrap());
-        //     arg_struct.output_feature_names = (0..dimensions.0).map(|x| x.to_string()).collect()
-        // }
-        // if arg_struct.sample_header_file.is_none() {
-        //     let dimensions = mtx_dim(arg_struct.input_array.as_ref().unwrap());
-        //     arg_struct.sample_names = (0..dimensions.1).map(|x| x.to_string()).collect()
-        // }
-
-        // eprintln!("INPUT ARRAY FEATURES:{}", arg_struct.input_array.as_ref().unwrap().len());
-        // eprintln!("OUTPUT ARRAY FEATURES:{}", arg_struct.output_array.as_ref().unwrap().len());
-        // eprintln!("SAMPLE HEADER:{}", arg_struct.sample_names.len());
 
         arg_struct
 
@@ -330,105 +271,7 @@ impl Parameters {
 
 }
 
-// Various modes that are included in Parameters, serving as control elements for program internals. Each mode can parse strings that represent alternative options for that mode. Enums were chosen because they compile down to extremely small memory footprint.
 
-
-#[derive(Clone,Copy,Debug)]
-pub enum BoostMode {
-    Additive,
-    Subsampling,
-}
-
-impl BoostMode {
-    pub fn read(input: &str) -> BoostMode {
-        match input {
-            "additive" | "a" | "add" => BoostMode::Additive,
-            "s" | "subsampling" | "subsample" => BoostMode::Subsampling,
-            _ => {
-                eprintln!("Not a valid boost mode, choose sub or add (defaulting to add)");
-                BoostMode::Additive
-            }
-        }
-    }
-
-}
-
-
-//
-// pub fn interpret(literal:&str, arg_iter:&mut std::env::Args) {
-//
-//     let command = Command::parse(literal);
-//
-//     let mut parameters = Parameters::read(arg_iter);
-//
-//     parameters.command = command;
-//
-//     match parameters.command {
-//         Command::Construct => construct(parameters),
-//         Command::Predict => predict(parameters),
-//         Command::Combined => combined(parameters),
-//         Command::Analyze => unimplemented!(),
-//     }
-//
-// }
-
-impl PredictionMode {
-    pub fn read(input:&str) -> PredictionMode {
-        match input {
-            "branch" | "branching" | "b" => PredictionMode::Branch,
-            "truncate" | "truncating" | "t" => PredictionMode::Truncate,
-            "abort" | "ab" => PredictionMode::Abort,
-            "auto" | "a" => PredictionMode::Auto,
-            _ => panic!("Not a valid prediction mode, choose branch, truncate, or abort.")
-        }
-    }
-}
-
-#[derive(Serialize,Deserialize,Debug,Clone,Copy)]
-pub enum PredictionMode {
-    Branch,
-    Truncate,
-    Abort,
-    Auto
-}
-
-#[derive(Serialize,Deserialize,Debug,Clone,Copy)]
-pub enum AveragingMode {
-    Arithmetic,
-    Stacking
-}
-
-impl AveragingMode {
-    pub fn read(input:&str) -> AveragingMode {
-        match input {
-            "a" | "arithmetic" | "average" => AveragingMode::Arithmetic,
-            "s" | "stacking" => AveragingMode::Stacking,
-            _ => panic!("Not a valid averaging mode, choose arithmetic or stacking.")
-        }
-    }
-}
-
-#[derive(Serialize,Deserialize,Debug,Clone,Copy)]
-pub enum WeighingMode {
-    AbsoluteGain,
-    AbsGainSquared,
-    AbsoluteDispersion,
-    AbsDispSquared,
-    Flat,
-}
-
-impl WeighingMode {
-    pub fn read(input:&str) -> WeighingMode {
-        match input {
-            "gain" | "absolute_gain" | "g" => WeighingMode::AbsoluteGain,
-            "gain_squared" | "gs" => WeighingMode::AbsGainSquared,
-            "dispersion" | "d" => WeighingMode::AbsoluteDispersion,
-            "dispersion_squared" | "ds" => WeighingMode::AbsDispSquared,
-            "flat" | "f" => WeighingMode::Flat,
-            _ => panic!("Not a valid weighing mode, please pick from gain, gain_squared, dispersion, dispersion_squared")
-        }
-    }
-}
 
 #[derive(Serialize,Deserialize,Debug,Clone,Copy)]
 pub enum DispersionMode {
@@ -473,39 +316,6 @@ impl NormMode {
     }
 }
 
-impl DropMode {
-    pub fn read(input: &str) -> DropMode {
-        match input {
-            "zeros" | "zero" | "z" => DropMode::Zeros,
-            "nans" | "nan" | "NaN" => DropMode::NaNs,
-            "none" | "no" => DropMode::No,
-            _ => panic!("Not a valid drop mode, choose zero, nan, or none")
-        }
-    }
-
-    pub fn cmp(&self) -> f64 {
-        match self {
-            &DropMode::Zeros => 0.,
-            &DropMode::NaNs => f64::NAN,
-            &DropMode::No => f64::INFINITY,
-        }
-    }
-
-    pub fn bool(&self) -> bool {
-        match self {
-            &DropMode::Zeros => true,
-            &DropMode::NaNs => true,
-            &DropMode::No => false,
-        }
-    }
-}
-
-#[derive(Debug,Clone,Copy,Serialize,Deserialize,PartialEq,Eq)]
-pub enum DropMode {
-    Zeros,
-    NaNs,
-    No,
-}
 
 
 pub fn read_matrix(location:&str) -> Vec<Vec<f64>> {
@@ -552,49 +362,6 @@ pub fn read_matrix(location:&str) -> Vec<Vec<f64>> {
 
 }
 
-pub fn read_standard_in() -> Vec<Vec<f64>> {
-
-    let stdin = io::stdin();
-    let count_array_pipe_guard = stdin.lock();
-
-    let mut count_array: Vec<Vec<f64>> = Vec::new();
-    // let mut samples = 0;
-
-    for (_i,line) in count_array_pipe_guard.lines().enumerate() {
-
-        // samples += 1;
-        let mut gene_vector = Vec::new();
-
-        for (_j,gene) in line.as_ref().expect("readline error").split_whitespace().enumerate() {
-
-            match gene.parse::<f64>() {
-                Ok(exp_val) => {
-
-                    gene_vector.push(exp_val);
-
-                },
-                Err(msg) => {
-
-                    if gene != "nan" && gene != "NAN" {
-                        println!("Couldn't parse a cell in the text file, Rust sez: {:?}",msg);
-                        println!("Cell content: {:?}", gene);
-                    }
-                    gene_vector.push(f64::NAN);
-                }
-            }
-
-        }
-
-        count_array.push(gene_vector);
-
-    };
-
-    // eprintln!("Counts read:");
-    // eprintln!("{:?}", counts);
-
-    matrix_flip(&count_array)
-}
-
 pub fn read_header(location: &str) -> Vec<String> {
 
     let mut header_map = HashMap::new();
@@ -635,14 +402,6 @@ pub fn read_sample_names(location: &str) -> Vec<String> {
     header_vector
 }
 
-
-
-mod manual_testing {
-
-    use super::*;
-
-
-}
 
 #[cfg(test)]
 pub mod primary_testing {

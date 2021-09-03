@@ -45,16 +45,7 @@ pub fn weighted_sampling_with_replacement(draws: usize,weights: &Vec<f64>) -> Ve
 
     'f_loop: for (i,element) in weights.iter().enumerate() {
         weight_sum -= *element;
-        // println!("descending:{}",descending_weight);
         'w_loop: while weight_sum < current_choice {
-
-                // println!("choice:{}",choice);
-
-                // if weighted_choices.len()%1000 == 0 {
-                //     if weighted_choices.len() > 0 {
-                //         // println!("{}",weighted_choices.len());
-                //     }
-                // }
 
             drawn_indecies.push(i);
             if let Some(new_choice) = weighted_choices.pop() {

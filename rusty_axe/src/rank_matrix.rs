@@ -1,15 +1,9 @@
 
-use std::collections::HashSet;
-use std::collections::HashMap;
-use std::cmp::Ordering;
 use std::sync::Arc;
-use std::sync::mpsc;
 extern crate rand;
 use std::f64;
 
-use crate::Feature;
-use crate::Sample;
-use crate::utils::{l1_sum,l2_sum,vec2_from_arr,arr_from_vec2,ArgMinMax,ArgMinMaxII,ArgSort,ArgSortII};
+use crate::utils::{arr_from_vec2,ArgMinMax};
 use crate::io::NormMode;
 use crate::io::DispersionMode;
 use crate::rank_vector::RankVector;
@@ -38,20 +32,14 @@ impl RankMatrix {
 
     pub fn new<'a> (counts: Vec<Vec<f64>>, parameters:&Parameters) -> RankMatrix {
 
-        let mut meta_vector: Vec<RankVector<Vec<Node>>> = counts
+        let meta_vector: Vec<RankVector<Vec<Node>>> = counts
             // .into_iter()
             .into_par_iter()
-            .enumerate()
-            .map(|(i,loc_counts)|{
-                // if i%200 == 0 {
-                //     // println!("Initializing: {}",i);
-                // }
+            .map(|loc_counts|{
                 RankVector::<Vec<Node>>::link(&loc_counts)
         }).collect();
 
         let dim = (meta_vector.len(),meta_vector.get(0).map(|x| x.raw_len()).unwrap_or(0));
-
-        // println!("Made rank table with {} features, {} samples:", dim.0,dim.1);
 
         let rm = RankMatrix {
             meta_vector:meta_vector,
@@ -71,20 +59,14 @@ impl RankMatrix {
 
     pub fn from_array(counts: &Array2<f64>,parameters:&Parameters) -> RankMatrix {
 
-        let mut meta_vector: Vec<RankVector<Vec<Node>>> = counts.axis_iter(Axis(0))
+        let meta_vector: Vec<RankVector<Vec<Node>>> = counts.axis_iter(Axis(0))
             // .into_iter()
             .into_par_iter()
-            .enumerate()
-            .map(|(i,loc_counts)|{
-                // if i%200 == 0 {
-                //     // println!("Initializing: {}",i);
-                // }
+            .map(|loc_counts|{
                 RankVector::<Vec<Node>>::link_array(loc_counts)
         }).collect();
 
         let dim = (meta_vector.len(),meta_vector.get(0).map(|x| x.raw_len()).unwrap_or(0));
-
-        // println!("Made rank table with {} features, {} samples:", dim.0,dim.1);
 
         let rm = RankMatrix {
             meta_vector:meta_vector,
@@ -202,11 +184,9 @@ impl RankMatrix {
 
     pub fn derive_specified(&self, features:&[usize],samples:&[usize]) -> RankMatrix {
 
-        let mut new_meta_vector: Vec<Arc<RankVector<Vec<Node>>>> = Vec::with_capacity(features.len());
-
         let sample_stencil = Stencil::from_slice(samples);
 
-        let mut new_meta_vector: Vec<RankVector<Vec<Node>>> = features.iter().map(|i| self.meta_vector[*i].derive_stencil(&sample_stencil)).collect();
+        let new_meta_vector: Vec<RankVector<Vec<Node>>> = features.iter().map(|i| self.meta_vector[*i].derive_stencil(&sample_stencil)).collect();
 
         let dimensions = (new_meta_vector.len(),new_meta_vector.get(0).map(|x| x.raw_len()).unwrap_or(0));
 
@@ -221,78 +201,7 @@ impl RankMatrix {
         }
 
     }
-    //
-    // pub fn order_dispersions(&self,draw_order:&[usize]) -> Array1<f64> {
-    //     let mut full_dispersion = self.full_dispersion(draw_order);
-    //
-    //     let normed = match self.norm_mode {
-    //         NormMode::L1 => { full_dispersion.sum_axis(Axis(1))},
-    //         NormMode::L2 => { full_dispersion.mapv_inplace(|x| x.powi(2)); full_dispersion.sum_axis(Axis(1))},
-    //     };
-    //
-    //     normed
-    // }
-    //
-    // pub fn full_dispersion(&self,draw_order:&[usize]) -> Array2<f64> {
-    //
-    //     let mut forward_dispersions: Array2<f64> = Array2::zeros((draw_order.len()+1,self.dimensions.0));
-    //     let mut reverse_dispersions: Array2<f64> = Array2::zeros((draw_order.len()+1,self.dimensions.0));
-    //
-    //     let mut worker_vec = RankVector::empty_sv();
-    //
-    //     for (i,v) in self.meta_vector.iter().enumerate() {
-    //         worker_vec.clone_from_prototype(v);
-    //         let fd = worker_vec.ordered_dispersion(draw_order,self.dispersion_mode);
-    //         for (j,fr) in fd.into_iter().enumerate() {
-    //             forward_dispersions[(j,i)] = fr;
-    //         }
-    //     }
-    //
-    //     let mut reverse_draw_order:Vec<usize> = draw_order.to_owned();
-    //     reverse_draw_order.reverse();
-    //
-    //     for (i,v) in self.meta_vector.iter().enumerate() {
-    //         worker_vec.clone_from_prototype(v);
-    //         let mut rd = worker_vec.ordered_dispersion(&reverse_draw_order,self.dispersion_mode);
-    //         for (j,rr) in rd.into_iter().enumerate() {
-    //             reverse_dispersions[(reverse_draw_order.len() - j,i)] = rr;
-    //         }
-    //     }
-    //     // assert_eq!(draw_order.len(),7);
-    //     // assert_eq!(forward_dispersions.len(),8);
-    //     // assert_eq!(reverse_dispersions.len(),8);
-    //
-    //     let len = forward_dispersions.dim().0;
-    //
-    //     let reverse_regularization = (Array1::<f64>::range(0.,len as f64 ,1.) / len as f64).mapv(|x| x.powf(self.split_fraction_regularization));
-    //     let forward_regularization = (Array1::<f64>::range(len as f64 ,0.,-1.) / len as f64).mapv(|x| x.powf(self.split_fraction_regularization));
-    //
-    //     for mut feature in forward_dispersions.axis_iter_mut(Axis(1)) {
-    //         feature *= &forward_regularization;
-    //     }
-    //
-    //     for mut feature in reverse_dispersions.axis_iter_mut(Axis(1)) {
-    //         feature *= &reverse_regularization;
-    //     }
-    //
-    //     let mut dispersions = &forward_dispersions + &reverse_dispersions;
-    //
-    //     if self.standardize {
-    //         for (i,mut feature) in dispersions.axis_iter_mut(Axis(1)).enumerate() {
-    //             if forward_dispersions[[0,i]] > 0. {
-    //                 feature /= forward_dispersions[[0,i]];
-    //             }
-    //             else {
-    //                 feature.fill(1.);
-    //             };
-    //
-    //         }
-    //     }
-    //     // println!("{:?}",dispersions);
-    //
-    //     dispersions
-    //
-    // }
+
 
 
     pub fn order_dispersions(&self,draw_order:&[usize]) -> Array1<f64> {
@@ -301,7 +210,7 @@ impl RankMatrix {
 
         let mut worker_vec = RankVector::empty_sv();
 
-        for (j,v) in self.meta_vector.iter().enumerate() {
+        for v in self.meta_vector.iter() {
             worker_vec.clone_from_prototype(v);
 
             let standardization = if self.standardize {
@@ -331,9 +240,7 @@ impl RankMatrix {
             }
         }
 
-        // println!("D:{:?}",dispersions);
-
-        for (j,v) in self.meta_vector.iter().enumerate().rev() {
+        for v in self.meta_vector.iter().rev() {
             worker_vec.clone_from_prototype(v);
 
             let standardization = if self.standardize {
@@ -364,8 +271,6 @@ impl RankMatrix {
             }
         }
 
-        // println!("D:{:?}",dispersions);
-
         dispersions
 
     }
@@ -373,20 +278,13 @@ impl RankMatrix {
     pub fn split(input:&Array2<f64>,output:&Array2<f64>,parameters:&Parameters) -> Option<(usize,usize,f64)> {
         let input_matrix = RankMatrix::from_array(input, parameters);
         let output_matrix = RankMatrix::from_array(output, parameters);
-        RankMatrix::split_input_output(input_matrix, output_matrix,parameters)
+        RankMatrix::split_input_output(input_matrix, output_matrix)
     }
 
-    pub fn split_input_output(input_matrix:RankMatrix,output_matrix:RankMatrix,parameters:&Parameters) -> Option<(usize,usize,f64)> {
+    pub fn split_input_output(input_matrix:RankMatrix,output_matrix:RankMatrix) -> Option<(usize,usize,f64)> {
 
 
-        let mut draw_orders: Vec<Vec<usize>> = input_matrix.meta_vector.iter().map(|mv| mv.draw_order()).collect();
-
-        // let lsc = parameters.leaf_size_cutoff;
-
-        // for draw_order in draw_orders.iter_mut() {
-        //     draw_order.rotate_left(lsc);
-        //     draw_order.truncate((draw_order.len() - lsc*2).max(0));
-        // }
+        let draw_orders: Vec<Vec<usize>> = input_matrix.meta_vector.iter().map(|mv| mv.draw_order()).collect();
 
 
         let minima: Vec<Option<(usize,usize,f64)>> =
@@ -417,10 +315,10 @@ impl RankMatrix {
     }
 
 
-    pub fn split_candidates(input_matrix:RankMatrix,output_matrix:RankMatrix,parameters:&Parameters) -> Vec<(usize,usize,f64)> {
+    pub fn split_candidates(input_matrix:RankMatrix,output_matrix:RankMatrix) -> Vec<(usize,usize,f64)> {
 
 
-        let mut draw_orders: Vec<Vec<usize>> = input_matrix.meta_vector.iter().map(|mv| mv.draw_order()).collect();
+        let draw_orders: Vec<Vec<usize>> = input_matrix.meta_vector.iter().map(|mv| mv.draw_order()).collect();
 
         let mut minima: Vec<(usize,usize,f64)> =
             draw_orders
@@ -612,14 +510,8 @@ mod rank_matrix_tests {
           [5.9,3.0,5.1,1.8] ]
     }
 
-    fn fetch_test() {
-        let rm = RankMatrix::from_array(&iris(), &blank_parameter());
-        let v = rm.feature_fetch(0, 91);
-        assert_eq!(v,6.1);
-    }
-
     fn blank_parameter() -> Parameters {
-        let mut parameters = Parameters::empty();
+        let parameters = Parameters::empty();
         parameters
     }
 
@@ -674,7 +566,7 @@ mod rank_matrix_tests {
         parameters.dispersion_mode = DispersionMode::MAD;
         parameters.norm_mode = NormMode::L1;
         parameters.split_fraction_regularization = 1.;
-        let mut mtx = RankMatrix::new(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]],&parameters);
+        let mtx = RankMatrix::new(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]],&parameters);
         let draw_order = mtx.sort_by_feature(0);
 
         let order_dispersions = mtx.order_dispersions(&draw_order);
@@ -697,7 +589,7 @@ mod rank_matrix_tests {
     #[test]
     pub fn rank_matrix_derive_test() {
         let parameters = blank_parameter();
-        let mut mtx = RankMatrix::new(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]],&parameters);
+        let mtx = RankMatrix::new(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]],&parameters);
         let kid1 = mtx.derive(&vec![0,2,4,6]);
         let kid2 = mtx.derive(&vec![1,3,5,7]);
         println!("{:?}",kid1);
@@ -717,7 +609,7 @@ mod rank_matrix_tests {
     #[test]
     pub fn rank_matrix_derive_feature_twice() {
         let parameters = blank_parameter();
-        let mut mtx = RankMatrix::new(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]],&parameters);
+        let mtx = RankMatrix::new(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]],&parameters);
         let kid = mtx.derive_specified(&vec![0,0],&vec![0,2,4,6]);
         println!("{:?}",kid);
         assert_eq!(kid.medians(),vec![5.,5.]);
@@ -733,7 +625,7 @@ mod rank_matrix_tests {
     #[test]
     pub fn rank_matrix_derive_sample_twice() {
         let parameters = blank_parameter();
-        let mut mtx = RankMatrix::new(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]],&parameters);
+        let mtx = RankMatrix::new(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]],&parameters);
         let kid = mtx.derive_specified(&vec![0],&vec![0,2,4,6,6]);
         println!("{:?}",kid);
         assert_eq!(kid.medians(),vec![10.]);
@@ -750,8 +642,9 @@ mod rank_matrix_tests {
     pub fn rank_matrix_derive_empty_test() {
         let parameters = blank_parameter();
         let mtx = RankMatrix::new(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.],vec![0.,1.,0.,1.,0.,1.,0.,1.]],&parameters);
-        let kid1 = mtx.derive(&vec![0,2,4,6]);
-        let kid2 = mtx.derive(&vec![1,3,5,7]);
+        let _kid1 = mtx.derive(&vec![0,2,4,6]);
+        let _kid2 = mtx.derive(&vec![1,3,5,7]);
+
     }
 
     #[test]
@@ -777,7 +670,7 @@ mod rank_matrix_tests {
         parameters.split_fraction_regularization = 1.;
         let input = RankMatrix::new(vec![(0..150).map(|x| x as f64).collect::<Vec<f64>>()],&parameters);
         let iris_matrix = RankMatrix::from_array(&iris().t().to_owned(),&parameters);
-        let split = RankMatrix::split_input_output(input, iris_matrix, &parameters);
+        let split = RankMatrix::split_input_output(input, iris_matrix);
         eprintln!("{:?}",parameters);
         eprintln!("{:?}",split);
         panic!();

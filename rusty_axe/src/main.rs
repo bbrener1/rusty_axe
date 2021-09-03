@@ -130,10 +130,10 @@ impl Filter {
     pub fn filter_matrix(&self, mtx: &Array2<f64>) -> Vec<usize> {
         let scores = self.reduction.score_matrix(mtx);
         if self.orientation {
-            scores.into_iter().enumerate().filter(|(i,s)| *s > self.split).map(|(i,s)| i).collect()
+            scores.into_iter().enumerate().filter(|(i,s)| *s > self.split).map(|(i,_)| i).collect()
         }
         else {
-            scores.into_iter().enumerate().filter(|(i,s)| *s <= self.split).map(|(i,s)| i).collect()
+            scores.into_iter().enumerate().filter(|(i,s)| *s <= self.split).map(|(i,_)| i).collect()
         }
     }
 
