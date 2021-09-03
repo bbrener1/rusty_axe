@@ -1,11 +1,5 @@
 
-use std::sync::Arc;
-use std::cmp::PartialOrd;
-use std::cmp::Ordering;
-use std::sync::mpsc;
 use std::f64;
-use std::mem::replace;
-use std::collections::{HashMap,HashSet};
 use serde_json;
 
 use ndarray::prelude::*;
@@ -13,34 +7,15 @@ use ndarray::prelude::*;
 extern crate rand;
 use rand::prelude::*;
 
-use rayon::prelude::*;
-
 use crate::rank_matrix::{RankMatrix};
 use crate::Feature;
 use crate::Sample;
 use crate::io::Parameters;
 use crate::io::DispersionMode;
 use crate::Filter;
-use crate::utils::{argmin,argsort,jaccard,arr_from_vec2,ArgSort,ArgSortII};
 use crate::random_forest::Prototype;
 
-use std::fs::File;
-use std::io::Write;
-use std::io::Read;
-use std::error::Error;
-
-use std::fs;
-use std::path::Path;
-use std::ffi::OsStr;
-use std::env;
-
-extern crate zip;
-use zip::ZipWriter;
-use zip::write::FileOptions;
-
 use crate::fast_nipal_vector::{project,Projection};
-
-use rayon::prelude::*;
 
 #[derive(Clone,Debug)]
 pub struct Node {
@@ -142,7 +117,7 @@ impl Node {
         let input_feature_bootstrap: Vec<Feature> = input_index_bootstrap.iter().map(|&i| self.input_features[i].clone()).collect();
         let output_feature_bootstrap: Vec< Feature> = output_index_bootstrap.iter().map(|&i| self.output_features[i].clone()).collect();
 
-        let sample_index_bootstrap: Vec<usize> = (0..parameters.sample_subsample).map(|i| rng.gen_range(0..self.samples.len())).collect();
+        let sample_index_bootstrap: Vec<usize> = (0..parameters.sample_subsample).map(|_| rng.gen_range(0..self.samples.len())).collect();
         let sample_bootstrap: Vec<Sample> = sample_index_bootstrap.iter().map(|i| self.samples[*i].clone()).collect();
 
         (input_feature_bootstrap,output_feature_bootstrap,sample_bootstrap)
@@ -221,13 +196,13 @@ impl Node {
         let input_ranks = self.input_rank_matrix(prototype, parameters);
         let output_ranks = self.output_rank_matrix(prototype, parameters);
 
-        let minima = RankMatrix::split_candidates(input_ranks,output_ranks,parameters);
+        let minima = RankMatrix::split_candidates(input_ranks,output_ranks);
 
         let input_features = self.input_features.clone();
 
         let filters = if parameters.reduce_input {
             minima.into_iter()
-            .map(|(local_feature,local_sample,local_threshold)| {
+            .map(|(local_feature,_,local_threshold)| {
 
                 let Projection {
                     weights, means, ..
@@ -240,7 +215,7 @@ impl Node {
         }
         else {
             minima.into_iter()
-            .map(|(local_feature,local_sample,local_threshold)| {
+            .map(|(local_feature,_,local_threshold)| {
                 let left_filter = Filter::new(vec![input_features[local_feature].clone(),],vec![0.,],vec![1.,],local_threshold,false);
                 let right_filter = Filter::new(vec![input_features[local_feature].clone(),],vec![0.,],vec![1.,],local_threshold,true);
                 (left_filter,right_filter)
@@ -282,8 +257,8 @@ impl Node {
 
         let (left_filter,right_filter,left_samples,right_samples) = selected_candidates?;
 
-        let mut left_child = self.derive_prototype(left_samples, Some(left_filter));
-        let mut right_child = self.derive_prototype(right_samples, Some(right_filter));
+        let left_child = self.derive_prototype(left_samples, Some(left_filter));
+        let right_child = self.derive_prototype(right_samples, Some(right_filter));
 
         self.means = Some(self.output_rank_matrix(prototype, parameters).means());
         self.medians = Some(self.output_rank_matrix(prototype, parameters).medians());
@@ -412,7 +387,6 @@ impl SerialNode {
 mod node_testing {
 
     use super::*;
-    use crate::random_forest;
     use crate::io::NormMode;
 
     fn iris() -> Array2<f64> {

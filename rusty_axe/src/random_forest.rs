@@ -1,28 +1,17 @@
-use std::fs::File;
 use std::io::Write;
 use std::io::Error;
-use std::io::BufRead;
 use std::io;
-use std::collections::HashMap;
-use ndarray::prelude::{Array,Axis,Array2,arr2};
+use ndarray::prelude::{Array2};
 
 use rayon::prelude::*;
 
-use std::fs::OpenOptions;
-use rand::seq::SliceRandom;
-use rand::prelude::*;
-
 
 extern crate rand;
-use rand::seq;
-
-use crate::fast_nipal_vector::{project};
 
 use crate::io::Parameters;
 use crate::Feature;
 use crate::Sample;
 use crate::node::Node;
-use crate::utils::{project_vec,vec2_from_arr,arr_from_vec2};
 use crate::rank_matrix::RankMatrix;
 
 pub struct Forest {
@@ -31,8 +20,6 @@ pub struct Forest {
     samples: Vec<Sample>,
 
     prototype: Prototype,
-
-    roots: Vec<Node>,
 
     parameters: Parameters,
 }
@@ -84,7 +71,6 @@ impl Forest {
                     output_features,
                     samples,
                     prototype,
-                    roots: Vec::with_capacity(tree_limit),
                     parameters: parameters,
                 }
     }

@@ -39,10 +39,6 @@ impl Projector {
         }
     }
 
-    pub fn max_iter(mut self, set:usize) -> Projector {
-        self.max_iter = set;
-        self
-    }
 
     pub fn calculate_projection(&mut self) -> Option<(Array1<f64>,Array1<f64>,Array1<f64>,Array1<f64>)> {
         self.weights.fill(1.);
@@ -71,8 +67,6 @@ impl Projector {
         let mut means = Array2::zeros((n,self.array.dim().1));
         let mut scale_factors = Array2::zeros((n,self.array.dim().0));
         for i in 0..n {
-            // println!("Projection {:?}",i);
-            // println!("{:?}",self);
             let (n_loadings,n_scores,n_means,n_scale_factors)= self.calculate_projection()?;
             loadings.row_mut(i).assign(&n_loadings);
             weights.row_mut(i).assign(&n_scores);
@@ -130,16 +124,12 @@ fn center(mut input:Array2<f64>) -> Array2<f64> {
 mod nipals_tests {
 
     use super::*;
-    use rand::{thread_rng,Rng};
-    use rand::distributions::Standard;
     use crate::utils::iris_array;
-    // use test::Bencher;
 
 
     #[test]
     fn iris_projection() {
         let iris = iris_array();
-        let iris_m = &iris - 6.;
         println!("{:?}",iris);
         let projection = Projector::from(iris).calculate_n_projections(4);
         println!("{:?}",projection);

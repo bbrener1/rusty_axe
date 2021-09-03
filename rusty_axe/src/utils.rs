@@ -1,62 +1,15 @@
 use ndarray::prelude::*;
 use std::cmp::Ordering;
 use std::f64;
-use crate::fast_nipal_vector::{Projector,Projection};
 
 fn mean(input: &Vec<f64>) -> f64 {
     input.iter().sum::<f64>() / (input.len() as f64)
-}
-
-fn covariance(vec1:&Vec<f64>,vec2:&Vec<f64>) -> f64 {
-
-    if vec1.len() != vec2.len() {
-        panic!("Tried to compute covariance for unequal length vectors: {}, {}",vec1.len(),vec2.len());
-    }
-
-    let mean1: f64 = mean(vec1);
-    let mean2: f64 = mean(vec1);
-
-    let covariance = vec1.iter().zip(vec2.iter()).map(|(x,y)| (x - mean1) * (y - mean2)).sum::<f64>() / (vec1.len() as f64 - 1.);
-
-    if covariance.is_nan() {0.} else {covariance}
-
-}
-
-
-pub fn project_vec(vec:Vec<Vec<f64>>,n:usize) -> Projection {
-    let arr = arr_from_vec2(vec);
-    let projector = Projector::from(arr);
-    let output = projector.calculate_n_projections(n).unwrap();
-    output
 }
 
 pub fn arr_from_vec2(vec:Vec<Vec<f64>>) -> Array2<f64> {
     let dim0 = vec.len();
     let dim1 = vec[0].len();
     Array::from_iter(vec.into_iter().flat_map(|a| a.into_iter())).into_shape((dim0,dim1)).unwrap()
-}
-
-pub fn vec2_from_arr(arr: &Array2<f64>) -> Vec<Vec<f64>> {
-    arr.axis_iter(Axis(0)).map(|r| r.to_vec()).collect()
-}
-
-pub fn variance(input: &Vec<f64>) -> f64 {
-
-    let mean = mean(input);
-
-    let var = input.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / (input.len() as f64 - 1.).max(1.);
-
-    if var.is_nan() {0.} else {var}
-}
-
-
-pub fn std_dev(input: &Vec<f64>) -> f64 {
-
-    let mean = mean(input);
-
-    let std_dev = (input.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / (input.len() as f64 - 1.).max(1.)).sqrt();
-
-    if std_dev.is_nan() {0.} else {std_dev}
 }
 
 pub fn pearsonr(vec1:&Vec<f64>,vec2:&Vec<f64>) -> f64 {
@@ -82,40 +35,6 @@ pub fn pearsonr(vec1:&Vec<f64>,vec2:&Vec<f64>) -> f64 {
 
     if r.is_nan() {0.} else {r}
 
-}
-
-fn row_echelon(mtx: &Vec<Vec<f64>>) {
-    let mut working = matrix_flip(mtx);
-    let dim = mtx_dim(&working);
-    let mut column_order: Vec<usize> = (0..dim.0).collect();
-    let mut row_order: Vec<usize> = (0..dim.1).collect();
-    for i in 0..working.len() {
-        let column = &working[i];
-        let first_value = column.iter().find(|x| x.abs() > 0.);
-
-    };
-}
-
-
-pub fn l1_sum(mtx_in:&Array2<f64>, weights: &Array1<f64>) -> Array1<f64> {
-    let weight_sum = weights.sum();
-    let sample_sums = mtx_in.dot(weights);
-    sample_sums / weight_sum
-}
-
-pub fn l2_sum(mtx_in:&Array2<f64>, weights: &Array1<f64>) -> Array1<f64> {
-    let weight_sum = weights.sum();
-    let sample_sums = mtx_in.mapv(|x| x.powi(2)).dot(weights);
-    sample_sums / weight_sum
-}
-
-
-pub fn jaccard(a:&[bool],b:&[bool]) -> f64 {
-    assert!(a.len() == b.len());
-    assert!(a.len() != 0);
-    let i = a.iter().zip(b.iter()).filter(|(a,b)| **a && **b).count() as f64;
-    let u = a.iter().zip(b.iter()).filter(|(a,b)| **a || **b).count() as f64;
-    return 1. - (i/u)
 }
 
 pub fn argsort<I: Iterator<Item=T>,T: PartialOrd + Clone>(s:I) -> Vec<(usize,T)>{
