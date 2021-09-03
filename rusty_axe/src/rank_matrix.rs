@@ -119,6 +119,10 @@ impl RankMatrix {
 
     }
 
+    pub fn means(&self) -> Vec<f64> {
+        self.meta_vector.iter().map(|x| x.mean()).collect()
+    }
+
     pub fn medians(&self) -> Vec<f64> {
         self.meta_vector.iter().map(|x| x.median()).collect()
     }

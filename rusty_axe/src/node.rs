@@ -55,6 +55,9 @@ pub struct Node {
     input_projection: Option<Projection>,
     output_projection: Option<Projection>,
 
+    means: Option<Vec<f64>>,
+    medians: Option<Vec<f64>>,
+
     pub depth: usize,
     pub children: Vec<Node>,
 
@@ -77,6 +80,9 @@ impl Node {
             output_features: output_features.to_owned(),
             samples: samples.to_owned(),
 
+            means: None,
+            medians: None,
+
             depth: 0,
             children: vec![],
 
@@ -98,6 +104,9 @@ impl Node {
             input_features: self.input_features.clone(),
             output_features: self.output_features.clone(),
             samples: samples,
+
+            means: None,
+            medians: None,
 
             depth: self.depth+1,
             children: vec![],
@@ -148,6 +157,9 @@ impl Node {
             input_features: input_bootstrap,
             output_features: output_bootstrap,
             samples: sample_bootstrap,
+
+            means: None,
+            medians: None,
 
             depth: self.depth,
             children: vec![],
@@ -206,16 +218,10 @@ impl Node {
 
     pub fn candidate_filters(&mut self,prototype:&Prototype,parameters:&Parameters) -> Vec<(Filter,Filter)> {
 
-        // println!("Generating matrices");
-
         let input_ranks = self.input_rank_matrix(prototype, parameters);
         let output_ranks = self.output_rank_matrix(prototype, parameters);
 
-        // println!("Matrices ready,splitting");
-
         let minima = RankMatrix::split_candidates(input_ranks,output_ranks,parameters);
-
-        // println!("{:?}",minima);
 
         let input_features = self.input_features.clone();
 
@@ -253,17 +259,13 @@ impl Node {
     pub fn split(&mut self, prototype:&Prototype,parameters:&Parameters) -> Option<&mut [Node]> {
 
         if self.depth >= parameters.depth_cutoff {
-            // println!("Depth exceeded");
             return None
         };
 
         if !self.prototype {panic!("Attempted to split on a non-prototype node")};
 
-        // println!("Deriving bootstrap");
         let mut slim_node = self.derive_bootstrap(parameters);
-        // println!("Deriving candidates");
         let candidate_filters = slim_node.candidate_filters(prototype,parameters);
-        // println!("Filtering");
         let sample_indices: Vec<usize> = self.samples.iter().map(|s| s.index).collect();
         let inputs = prototype.input_array.select(Axis(0),&sample_indices);
 
@@ -283,6 +285,9 @@ impl Node {
         let mut left_child = self.derive_prototype(left_samples, Some(left_filter));
         let mut right_child = self.derive_prototype(right_samples, Some(right_filter));
 
+        self.means = Some(self.output_rank_matrix(prototype, parameters).means());
+        self.medians = Some(self.output_rank_matrix(prototype, parameters).medians());
+
         let children = vec![left_child,right_child];
         self.children = children;
 
@@ -293,7 +298,6 @@ impl Node {
     pub fn grow(&mut self, prototype:&Prototype, parameters:&Parameters) {
         if let Some(children) = self.split(prototype,parameters) {
             for child in children.iter_mut() {
-                // println!("D:{:?}",child.depth);
                 child.grow(prototype,parameters);
             }
         }
@@ -361,6 +365,8 @@ impl Node {
         let serialized_children = self.children.iter().map(|c| c.to_serial()).collect();
         SerialNode {
             samples: self.samples.iter().map(|s| s.index).collect(),
+            means: self.means.clone(),
+            medians: self.medians.clone(),
             filter: self.filter.clone(),
             depth: self.depth,
             children: serialized_children,
@@ -372,6 +378,8 @@ impl Node {
 #[derive(Clone,Debug,Serialize,Deserialize)]
 pub struct SerialNode {
     samples: Vec<usize>,
+    means: Option<Vec<f64>>,
+    medians: Option<Vec<f64>>,
     filter: Option<Filter>,
     depth: usize,
     children: Vec<SerialNode>,
@@ -389,17 +397,6 @@ impl SerialNode {
         Ok(())
     }
 
-    // pub fn dump(self, address: String) -> Result<(),std::io::Error> {
-    //     use std::fs::OpenOptions;
-    //     use std::io::Write;
-    //     let mut handle = OpenOptions::new().write(true).truncate(true).create(true).open(address.clone())?;
-    //     let mut zip = ZipWriter::new(handle);
-    //     zip.start_file(address,FileOptions::default());
-    //     let string = self.to_string()?;
-    //     zip.write(string.as_bytes())?;
-    //     zip.finish()?;
-    //     Ok(())
-    // }
 
     pub fn to_string(self) -> Result<String,serde_json::Error> {
         serde_json::to_string(&self)
@@ -411,16 +408,12 @@ impl SerialNode {
 }
 
 
-//
-//
-//
 #[cfg(test)]
 mod node_testing {
 
     use super::*;
     use crate::random_forest;
     use crate::io::NormMode;
-    // use ndarray_linalg;
 
     fn iris() -> Array2<f64> {
         array![ [5.1,3.5,1.4,0.2],
@@ -611,120 +604,6 @@ mod node_testing {
         eprintln!("{:?}",right_children.len());
         panic!();
     }
-
-
-    // fn trivial_node() -> Node {
-    //     let (input_counts,output_counts) = blank_counts();
-    //     let input_features = &vec![Feature::q(&1)][..];
-    //     let output_features = &vec![Feature::q(&2)][..];
-    //     let samples = &vec![][..];
-    //     let parameters = blank_parameter();
-    //     let feature_weight_option = None;
-    //     Node::prototype(&input_counts,&output_counts,input_features,output_features,samples,&parameters,feature_weight_option)
-    // }
-    //
-    // fn simple_node() -> Node {
-    //     let input_counts = arr_from_vec2(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]]);
-    //     let output_counts = arr_from_vec2(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]]);
-    //     let input_features = &vec![Feature::q(&0)][..];
-    //     let output_features = &vec![Feature::q(&0)][..];
-    //     let samples = &Sample::vec(vec![0,1,2,3,4,5,6,7])[..];
-    //     let parameters = blank_parameter();
-    //     let feature_weight_option = None;
-    //     Node::prototype(&input_counts,&output_counts,input_features,output_features,samples,&parameters,feature_weight_option)
-    // }
-
-    // #[test]
-    // fn node_test_blank() {
-    //     let mut root = blank_node();
-    //     root.mads();
-    //     root.medians();
-    // }
-    //
-    // #[test]
-    // fn node_test_trivial() {
-    //     let mut root = trivial_node();
-    //     root.mads();
-    //     root.medians();
-    // }
-
-    //
-    // #[test]
-    // fn node_test_dispersions() {
-    //
-    //     let mut root = simple_node();
-    //
-    //     let split0 = root.feature_index_split(0).unwrap();
-    //
-    //     println!("{:?}",root.samples());
-    //     println!("{:?}",root.output_table.full_values());
-    //     println!("{:?}",split0);
-    //
-    //     // panic!();
-    // }
-    //
-    // #[test]
-    // fn node_test_subsample() {
-    //
-    //     let mut root = simple_node();
-    //
-    //
-    //     for i in 0..1000 {
-    //         let sub = root.subsample(8, 2, 2);
-    //         let split_option = sub.rayon_best_split();
-    //         eprintln!("{:?}",sub.strip_clone());
-    //         let (draw_order,drop_set) = sub.input_rank_table().sort_by_feature(0);
-    //         eprintln!("{:?}",(&draw_order,&drop_set));
-    //         eprintln!("{:?}",sub.output_rank_table().order_dispersions(&draw_order,&drop_set,&sub.feature_weights));
-    //         eprintln!("{:?}",split_option.unwrap());
-    //         // if let Some(split) = split_option {
-    //         //     root.clone().derive_complete_by_split(&split,None);
-    //         // }
-    //     }
-    //
-    // }
-
-
-    // #[test]
-    // fn node_test_split() {
-    //
-    //     let mut root = simple_node();
-    //
-    //     let split = root.rayon_best_split();
-    //
-    //     println!("{:?}",split);
-    //
-    //     assert_eq!(split.dispersion,2822.265625);
-    //     assert_eq!(split.value, 5.);
-    // }
-    //
-    // #[test]
-    // fn node_test_simple() {
-    //
-    //     let mut root = simple_node();
-    //
-    //     println!("Created node");
-    //     // root.split_node();
-    //     let children = root.braid_split_node(8,1,1);
-    //     root.children = children.unwrap();
-    //
-    //     eprintln!("{:?}",root.braids[0]);
-    //
-    //     assert_eq!(&root.children[0].sample_names(),&vec!["1".to_string(),"3".to_string(),"4".to_string(),"5".to_string()]);
-    //     assert_eq!(&root.children[1].sample_names(),&vec!["0".to_string(),"6".to_string(),"7".to_string()]);
-    //
-    //     // assert_eq!(root.children[0].samples(),&vec!["1".to_string(),"4".to_string(),"5".to_string()]);
-    //     // assert_eq!(root.children[1].samples(),&vec!["0".to_string(),"3".to_string(),"6".to_string(),"7".to_string()]);
-    //
-    //
-    //     // assert_eq!(&root.children[0].sample_names(),&vec!["1".to_string(),"2".to_string(),"3".to_string(),"4".to_string(),"5".to_string()]);
-    //     // assert_eq!(&root.children[1].sample_names(),&vec!["0".to_string(),"2".to_string(),"6".to_string(),"7".to_string()]);
-    //     //
-    //     // assert_eq!(&root.children[0].output_table.full_values(),&vec![vec![-3.,0.,5.,-2.,-1.]]);
-    //     // assert_eq!(&root.children[1].output_table.full_values(),&vec![vec![10.,0.,15.,20.]]);
-    //
-    // }
-    //
 
 
 }
