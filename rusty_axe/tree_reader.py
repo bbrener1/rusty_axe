@@ -1700,7 +1700,8 @@ class Forest:
             # Now we need to loop over available clusters to place the cluster decorations into the template
 
             for cj in cluster_jsons:
-                cluster_summary_html = f'<script> summaries["cluster_{cj['clusterId']}"] = {cj};</script>'
+                cluster_id = cj['clusterId']
+                cluster_summary_html = f"<script> summaries['cluster_{cluster_id}'] = {cj};</script>"
                 html_report.write(cluster_summary_html)
 
         from subprocess import run
