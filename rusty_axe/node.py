@@ -307,7 +307,7 @@ class Node:
     def squared_residual_doublet(self):
 
         # Sum of squared residuals for samples of this node in this node and the parent.
-        # Can be cached more compactly than the mean residual doublet and useful for COV calculations. 
+        # Can be cached more compactly than the mean residual doublet and useful for COV calculations.
 
         self_residuals, parent_residuals = self.mean_residual_doublet()
         self_srs = np.sum(np.power(self_residuals, 2), axis=0)
@@ -661,8 +661,6 @@ class Node:
         for child in self.children:
             if child.filter.filter(sample):
                 nodes.extend(child.predict_sample_nodes(sample))
-
-        # print(nodes)
 
         return nodes
 
