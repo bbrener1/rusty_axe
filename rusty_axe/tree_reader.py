@@ -1518,12 +1518,13 @@ class Forest:
 
     def html_tree_summary(self, n=3, mode="ud", custom=None, labels=None, features=None, primary=True, cmap='viridis', secondary=True, figsize=(30, 30), output=None):
 
-        # First we'd like to make sure we are operating from scratch in the html directory:
 
         if n > (self.output.shape[1] / 2):
             print("WARNING, PICKED N THAT IS TOO LARGE, SETTING LOWER")
             n = max(int(self.output.shape[1] / 2), 1)
 
+
+        # First we'd like to make sure we are operating from scratch in the html directory:
         if output is None:
             location = self.location()
             html_location = self.html_directory()
@@ -1533,10 +1534,14 @@ class Forest:
             location = self.location()
             html_location = output
 
+        cluster_jsons = []
+
         for split_cluster in self.split_clusters:
             print(f"Summarizing:{split_cluster.name()}")
+            cj = split_cluster.json_cluster_summary(n=n)
+            cluster_jsons.append(cj)
             split_cluster.html_cluster_summary(
-                n=n, plot=False, output=html_location + str(split_cluster.id) + "/")
+                n=n, plot=False, output=html_location + str(split_cluster.id) + "/", json=cj)
 
         copyfile(location + "/tree_template.html",
                  html_location + "tree_template.html")
@@ -1694,9 +1699,8 @@ class Forest:
 
             # Now we need to loop over available clusters to place the cluster decorations into the template
 
-            for cluster in self.split_clusters:
-                cluster_summary_json = cluster.json_cluster_summary(n=n)
-                cluster_summary_html = f'<script> summaries["cluster_{cluster.id}"] = {cluster_summary_json};</script>'
+            for cj in cluster_jsons:
+                cluster_summary_html = f'<script> summaries["cluster_{cj['clusterId']}"] = {cj};</script>'
                 html_report.write(cluster_summary_html)
 
         from subprocess import run
