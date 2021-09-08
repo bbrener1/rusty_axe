@@ -661,7 +661,7 @@ class NodeCluster:
 
         return (local_html, global_html)
 
-    def html_cluster_summary(self, n=20, plot=True, json=None output=None):
+    def html_cluster_summary(self, n=20, plot=True, json=None, output=None):
 
         location = self.forest.location()
         if output is None:
