@@ -250,6 +250,9 @@ class Node:
             return np.zeros(len(self.forest.output_features))
 
     def partials(self):
+
+        # Partial gain, which is the signed percentage of all variance explained by the tree. Useful for scaling the variance explained by a given node for each feature to the total information explained, allowing comparisons of explained variance in all features.
+
         if len(self.children) > 1:
 
             descendants = self.nodes()
@@ -276,6 +279,9 @@ class Node:
             return self.additive_mean_gains()
 
     def mean_residual_doublet(self):
+
+        # Residuals of samples in this node as they appear in this node  and in the parent. Residuals in the parent are relative to the parent mean. This is a quantity that can be used without normalization for error calculations but it's probably not useful externally.
+
         counts = self.node_counts()
         self_means = self.means()
         if self.parent is not None:
@@ -299,6 +305,10 @@ class Node:
             return srs
 
     def squared_residual_doublet(self):
+
+        # Sum of squared residuals for samples of this node in this node and the parent.
+        # Can be cached more compactly than the mean residual doublet and useful for COV calculations. 
+
         self_residuals, parent_residuals = self.mean_residual_doublet()
         self_srs = np.sum(np.power(self_residuals, 2), axis=0)
         parent_srs = np.sum(np.power(parent_residuals, 2), axis=0)
@@ -318,10 +328,8 @@ class Node:
 
     def dispersions(self, mode='mean'):
 
-        # Dispersions of this node. Hardcoded for SSME at the moment.
-        # RECOMPUTED FROM SCRATCH. This SHOULD be mathematically equivalent to what
-        # rust computes, but this is NOT guaranteed.
-        # To do eventually: altered dispersion modes?
+        # Dispersions of this node. currently hardcoded for L2 norm relative
+        # to central tendency
 
         if self.cache:
             if hasattr(self, 'dispersion_cache'):
@@ -333,7 +341,7 @@ class Node:
             residuals = self.median_residuals()
         else:
             raise Exception(f"Mode not recognized:{mode}")
-        dispersions = np.power(residuals, 2)
+        dispersions = np.mean(np.power(residuals, 2),axis=0)
         if self.cache:
             self.dispersion_cache = dispersions
         return dispersions
