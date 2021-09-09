@@ -225,22 +225,22 @@ impl RankMatrix {
             match self.norm_mode {
                 NormMode::L1 => {
                     for (i,draw) in draw_order.iter().enumerate() {
-                        worker_vec.pop(*draw);
                         let regularization = (worker_vec.len() as f64 / draw_order.len() as f64).powf(self.split_fraction_regularization);
                         dispersions[i] += worker_vec.dispersion(self.dispersion_mode) * regularization / standardization;
+                        worker_vec.pop(*draw);
                     }
                 }
                 NormMode::L2 => {
                     for (i,draw) in draw_order.iter().enumerate() {
-                        worker_vec.pop(*draw);
                         let regularization = (worker_vec.len() as f64 / draw_order.len() as f64).powf(self.split_fraction_regularization);
                         dispersions[i] += (worker_vec.dispersion(self.dispersion_mode) * regularization / standardization).powi(2);
+                        worker_vec.pop(*draw);
                     }
                 }
             }
         }
 
-        for v in self.meta_vector.iter().rev() {
+        for v in self.meta_vector.iter() {
             worker_vec.clone_from_prototype(v);
 
             let standardization = if self.standardize {
@@ -256,16 +256,16 @@ impl RankMatrix {
             match self.norm_mode {
                 NormMode::L1 => {
                     for (i,draw) in draw_order.iter().enumerate().rev() {
-                        worker_vec.pop(*draw);
                         let regularization = (worker_vec.len() as f64 / draw_order.len() as f64).powf(self.split_fraction_regularization);
                         dispersions[i+1] += worker_vec.dispersion(self.dispersion_mode) * regularization / standardization;
+                        worker_vec.pop(*draw);
                     }
                 }
                 NormMode::L2 => {
                     for (i,draw) in draw_order.iter().enumerate().rev() {
-                        worker_vec.pop(*draw);
                         let regularization = (worker_vec.len() as f64 / draw_order.len() as f64).powf(self.split_fraction_regularization);
                         dispersions[i+1] += (worker_vec.dispersion(self.dispersion_mode) * regularization / standardization).powi(2);
+                        worker_vec.pop(*draw);
                     }
                 }
             }
@@ -299,10 +299,6 @@ impl RankMatrix {
                     Some((i,draw_order[local_index],*dispersion))
                 })
                 .collect();
-
-
-
-        println!("Minima:{:?}",minima);
 
         let (feature,sample,_) =
             minima.iter()
@@ -355,7 +351,8 @@ impl RankMatrix {
 mod rank_matrix_tests {
 
     use super::*;
-    use crate::utils::test_utils::iris;
+    use crate::utils::test_utils::{iris};
+    use crate::utils::slow_mad;
 
     fn blank_parameter() -> Parameters {
         let parameters = Parameters::empty();
@@ -404,8 +401,10 @@ mod rank_matrix_tests {
         let draw_order = mtx.sort_by_feature(0);
 
         let order_dispersions = mtx.order_dispersions(&draw_order);
-        assert_eq!(order_dispersions,array![594.0, 460.0, 354.0, 252.0, 130.0, 92.0, 162.0, 364.0, 594.0]);
+        assert_eq!(order_dispersions,array![594.,460.0, 354.0, 252.0, 130.0, 92.0, 162.0, 364.0,594.]);
     }
+
+// ,-3.,-2.,-1.,0.,5.,10.,15.,20.
 
     #[test]
     pub fn rank_matrix_test_ordered_mad() {
@@ -413,11 +412,15 @@ mod rank_matrix_tests {
         parameters.dispersion_mode = DispersionMode::MAD;
         parameters.norm_mode = NormMode::L1;
         parameters.split_fraction_regularization = 1.;
-        let mtx = RankMatrix::new(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]],&parameters);
+        let simple = vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]];
+        let mtx = RankMatrix::new(simple.clone(),&parameters);
         let draw_order = mtx.sort_by_feature(0);
 
         let order_dispersions = mtx.order_dispersions(&draw_order);
-        assert_eq!(order_dispersions,array![594.0, 460.0, 354.0, 252.0, 130.0, 92.0, 162.0, 364.0, 594.0]);
+
+        let correct = vec![5., 5.25, 5.75, 3.5, 3., 2.5,2.125, 2.625, 5.];
+
+        assert_eq!(order_dispersions.to_vec(),correct);
     }
 
     #[test]
@@ -429,7 +432,7 @@ mod rank_matrix_tests {
         let mtx = array![[-3.,10.,0.,5.,-2.,-1.,15.,20.]];
 
         let out = RankMatrix::split(&mtx.clone(),&mtx.clone(), &parameters);
-        assert_eq!(out,Some((0,1,10.)));
+        assert_eq!(out,Some((0,3,5.)));
     }
 
 
