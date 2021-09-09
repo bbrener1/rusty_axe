@@ -47,8 +47,6 @@ impl Forest {
 
     pub fn initialize_from(input_array: Array2<f64>, output_array: Array2<f64>,parameters: Parameters) -> Forest{
 
-                let report_string = format!("{}.prototype",parameters.report_address).to_string();
-
                 let samples = Sample::nvec(&parameters.sample_names().unwrap_or(
                     (0..input_array.dim().0).map(|i| format!("{:?}",i)).collect()
                 ));
@@ -61,9 +59,6 @@ impl Forest {
                 ));
 
                 let prototype = Prototype::new(input_array,output_array, &parameters);
-
-                let tree_limit = parameters.tree_limit;
-                let processor_limit = parameters.processor_limit;
 
 
                 Forest {
@@ -84,7 +79,6 @@ impl Forest {
                     &self.input_features,
                     &self.output_features,
                     &self.samples,
-                    &self.parameters,
                 );
 
         root.grow(&self.prototype,&self.parameters);
@@ -110,7 +104,7 @@ impl Forest {
 
             print!("\n");
 
-            results.into_iter().try_fold((),|acc,x| x)
+            results.into_iter().try_fold((),|_,x| x)
         }
         else {
 
@@ -123,7 +117,7 @@ impl Forest {
 
             print!("\n");
 
-            results.into_iter().try_fold((),|acc,x| x)
+            results.into_iter().try_fold((),|_,x| x)
 
         }
 
@@ -301,7 +295,7 @@ mod random_forest_tests {
 
     pub fn iris_prototype() -> Prototype {
 
-        let mut parameters = Parameters::empty();
+        let parameters = Parameters::empty();
 
         Prototype::new(iris(), iris(), &parameters)
     }

@@ -329,7 +329,7 @@ pub fn read_matrix(location:&str) -> Vec<Vec<f64>> {
 
         let mut gene_vector = Vec::new();
         let gene_line = line.expect("Readline error");
-        for (j,gene) in gene_line.split_whitespace().enumerate() {
+        for gene in gene_line.split_whitespace() {
             match gene.parse::<f64>() {
                 Ok(exp_val) => {
                     if exp_val != f64::NAN {
@@ -388,20 +388,6 @@ pub fn read_header(location: &str) -> Vec<String> {
     header_vector
 }
 
-pub fn read_sample_names(location: &str) -> Vec<String> {
-
-    let mut header_vector = Vec::new();
-
-    let sample_name_file = File::open(location).expect("Sample name file error!");
-    let mut sample_name_lines = io::BufReader::new(&sample_name_file).lines();
-
-    for line in sample_name_lines.by_ref() {
-        header_vector.push(line.expect("Error reading header line!").trim().to_string())
-    }
-
-    header_vector
-}
-
 
 #[cfg(test)]
 pub mod primary_testing {
@@ -409,45 +395,29 @@ pub mod primary_testing {
     use super::*;
     use crate::utils::*;
 
-    #[test]
-    fn test_matrix_flip() {
-        let mtx1 = vec![
-            vec![0,1,2],
-            vec![3,4,5],
-            vec![6,7,8]
-        ];
+    static TEST_LOCATION: &str = "./rusty_axe/src/testing/";
 
-        let mtx2 = vec![
-            vec![0,3,6],
-            vec![1,4,7],
-            vec![2,5,8]
-        ];
 
-        assert_eq!(matrix_flip(&mtx1),mtx2);
 
-    }
-
-    #[test]
-    fn test_pearsonr() {
-        let vec1 = vec![1.,2.,3.,4.,5.];
-        let vec2 = vec![2.,3.,4.,5.,6.];
-
-        println!("{:?}",pearsonr(&vec1,&vec2));
-
-        if (pearsonr(&vec1,&vec2)-1.) > 0.00001 {
-            panic!("Correlation error")
-        }
-    }
 
     #[test]
     fn test_parameters_args() {
-        let mut args_iter = vec![ "-c","testing/iris.tsv","-p","3","-o","./elsewhere/","-ifh","header_backup.txt"].into_iter().map(|x| x.to_string());
+        let mut args_iter = vec![
+            "blank",
+            "-c",
+            "testing/iris.tsv",
+            "-p",
+            "3",
+            "-o",
+            "./elsewhere/",
+            "-ifh",
+            "header_backup.txt"
+        ].into_iter().map(|x| x.to_string());
 
         let args = Parameters::read(&mut args_iter);
 
         assert_eq!(args.input_count_array_file, "testing/iris.tsv".to_string());
         assert_eq!(args.input_feature_header_file.unwrap(), "header_backup.txt".to_string());
-        // assert_eq!(args.output_feature_header_file.unwrap(), "header_backup.txt".to_string());
         assert_eq!(args.sample_header_file, None);
         assert_eq!(args.report_address, "./elsewhere/".to_string());
 
@@ -455,25 +425,36 @@ pub mod primary_testing {
 
     }
 
-
     #[test]
     fn test_read_counts_trivial() {
-        assert_eq!(read_matrix("./testing/trivial.txt"),Vec::<Vec<f64>>::with_capacity(0))
+        assert_eq!(
+            read_matrix(&format!("{}/trivial.txt",TEST_LOCATION)),
+            Vec::<Vec<f64>>::with_capacity(0)
+        );
     }
 
     #[test]
     fn test_read_counts_simple() {
-        assert_eq!(read_matrix("./testing/simple.txt"), vec![vec![10.,5.,-1.,0.,-2.,10.,-3.,20.]])
+        assert_eq!(
+            read_matrix(&format!("{}/simple.txt",TEST_LOCATION)),
+            vec![vec![10.,5.,-1.,0.,-2.,10.,-3.,20.]]
+        );
     }
 
     #[test]
     fn test_read_header_trivial() {
-        assert_eq!(read_header("./testing/trivial.txt"),Vec::<String>::with_capacity(0))
+        assert_eq!(
+            read_header(&format!("{}/trivial.txt",TEST_LOCATION)),
+            Vec::<String>::with_capacity(0)
+        )
     }
 
     #[test]
     fn test_read_header_simple() {
-        assert_eq!(read_header("./testing/iris.features"),vec!["petal_length","petal_width","sepal_length","sepal_width"])
+        assert_eq!(
+            read_header(&format!("{}/iris.features",TEST_LOCATION)),
+            vec!["petal_length","petal_width","sepal_length","sepal_width"]
+        )
     }
 
 

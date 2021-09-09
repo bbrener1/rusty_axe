@@ -1,5 +1,6 @@
 use crate::io::DispersionMode;
-use crate::utils::{slow_mad, ArgSortII};
+use crate::utils::{slow_mad};
+use crate::argminmax::*;
 use ndarray::prelude::*;
 use smallvec::SmallVec;
 use std::borrow::{Borrow, BorrowMut};
@@ -683,18 +684,6 @@ impl<
     }
 
     #[inline]
-    fn cov(&self) -> Option<f64> {
-        let median = self.median();
-        let mad = self.mad();
-
-        if self.len() < 2 || self.median() == 0. {
-            None
-        } else {
-            Some(mad / median)
-        }
-    }
-
-    #[inline]
     pub fn left_to_right(&self) -> Vec<usize> {
         GRVCrawler::new(self, self.nodes[self.raw_len()].next)
             .take(self.len())
@@ -1284,7 +1273,7 @@ pub struct GLVCrawler<
 mod rank_vector_tests {
 
     use super::*;
-    use crate::utils::{slow_mad, slow_median, slow_sme, slow_ssme};
+    use crate::utils::test_utils::{slow_median, slow_sme, slow_ssme};
 
     #[test]
     fn rank_vector_create_empty() {
