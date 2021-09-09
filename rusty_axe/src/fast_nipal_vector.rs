@@ -124,26 +124,26 @@ fn center(mut input:Array2<f64>) -> Array2<f64> {
 mod nipals_tests {
 
     use super::*;
-    use crate::utils::iris_array;
+    use crate::utils::test_utils::iris;
 
 
     #[test]
+
     fn iris_projection() {
-        let iris = iris_array();
+        let iris = iris();
         println!("{:?}",iris);
         let projection = Projector::from(iris).calculate_n_projections(4);
         println!("{:?}",projection);
 
-        let answer = array![[ 0.36158968, -0.08226889,  0.85657211,  0.35884393],
-       [ 0.65653988,  0.72971237, -0.1757674 , -0.07470647],
-       [-0.58099728,  0.59641809,  0.07252408,  0.54906091],
-       [ 0.31725455, -0.32409435, -0.47971899,  0.75112056]];
+        let answer = array![[ 0.36158968, 0.08226889,  0.85657211,  0.35884393],
+       [ 0.65653988,  0.72971237, 0.1757674 , 0.07470647],
+       [0.58099728,  0.59641809,  0.07252408,  0.54906091],
+       [ 0.31725455, 0.32409435, 0.47971899,  0.75112056]];
 
-       // The sign of the vectors is sometimes opposite. Check manually, by uncommenting the panic, but this test is oookay.
+       // Can't check the sign of the vectors directly since it's semi-random.
        eprintln!("diff: {:?}",&projection.as_ref().unwrap().weights);
 
        assert!((&projection.unwrap().weights.mapv(|x| x.abs()) - answer).mapv(|x| x.powi(2)).sum() < 0.001);
 
-       panic!()
     }
 }
