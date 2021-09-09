@@ -184,6 +184,8 @@ impl RankMatrix {
 
     pub fn derive_specified(&self, features:&[usize],samples:&[usize]) -> RankMatrix {
 
+        // Stencil derivation allows to quickly derive vectors with exactly repeating values. See rank vector for full logic.
+
         let sample_stencil = Stencil::from_slice(samples);
 
         let new_meta_vector: Vec<RankVector<Vec<Node>>> = features.iter().map(|i| self.meta_vector[*i].derive_stencil(&sample_stencil)).collect();
@@ -223,6 +225,8 @@ impl RankMatrix {
             else {1.0};
 
             match self.norm_mode {
+                // We don't want to check our norm at each interation so we choose one of two loops here, even though most of the code is redundant.
+
                 NormMode::L1 => {
                     for (i,draw) in draw_order.iter().enumerate() {
                         let regularization = (worker_vec.len() as f64 / draw_order.len() as f64).powf(self.split_fraction_regularization);
@@ -239,6 +243,8 @@ impl RankMatrix {
                 }
             }
         }
+
+        // We operate over the same features but in reverse sample order
 
         for v in self.meta_vector.iter() {
             worker_vec.clone_from_prototype(v);
@@ -257,6 +263,7 @@ impl RankMatrix {
                 NormMode::L1 => {
                     for (i,draw) in draw_order.iter().enumerate().rev() {
                         let regularization = (worker_vec.len() as f64 / draw_order.len() as f64).powf(self.split_fraction_regularization);
+                        // i+1 is important here because the first and last values are those where no sample was drawn or all samples were drawn, thus we need to offset the forward and reverse.
                         dispersions[i+1] += worker_vec.dispersion(self.dispersion_mode) * regularization / standardization;
                         worker_vec.pop(*draw);
                     }
