@@ -282,40 +282,7 @@ impl RankMatrix {
 
     }
 
-    pub fn split(input:&Array2<f64>,output:&Array2<f64>,parameters:&Parameters) -> Option<(usize,usize,f64)> {
-        let input_matrix = RankMatrix::from_array(input, parameters);
-        let output_matrix = RankMatrix::from_array(output, parameters);
-        RankMatrix::split_input_output(input_matrix, output_matrix)
-    }
 
-    pub fn split_input_output(input_matrix:RankMatrix,output_matrix:RankMatrix) -> Option<(usize,usize,f64)> {
-
-
-        let draw_orders: Vec<Vec<usize>> = input_matrix.meta_vector.iter().map(|mv| mv.draw_order()).collect();
-
-
-        let minima: Vec<Option<(usize,usize,f64)>> =
-            draw_orders
-                // .into_iter()
-                .into_par_iter()
-                .enumerate()
-                .map(|(i,draw_order)| {
-                    let ordered_dispersions = output_matrix.order_dispersions(&draw_order,);
-                    println!("{:?}",ordered_dispersions);
-                    let (local_index,dispersion) = ArgMinMax::argmin_v(ordered_dispersions.iter().skip(1))?;
-                    Some((i,draw_order[local_index],*dispersion))
-                })
-                .collect();
-
-        let (feature,sample,_) =
-            minima.iter()
-            .flat_map(|m| m)
-            .min_by(|&a,&b| (a.2).partial_cmp(&b.2).unwrap())?;
-
-        let threshold = input_matrix.feature_fetch(*feature,*sample);
-
-        Some((*feature,*sample,threshold))
-    }
 
 
     pub fn split_candidates(input_matrix:RankMatrix,output_matrix:RankMatrix) -> Vec<(usize,usize,f64)> {
@@ -430,18 +397,6 @@ mod rank_matrix_tests {
         assert_eq!(order_dispersions.to_vec(),correct);
     }
 
-    #[test]
-    pub fn rank_matrix_test_split() {
-        let mut parameters = blank_parameter();
-        parameters.dispersion_mode = DispersionMode::SSME;
-        parameters.norm_mode = NormMode::L1;
-        parameters.split_fraction_regularization = 0.;
-        let mtx = array![[-3.,10.,0.,5.,-2.,-1.,15.,20.]];
-
-        let out = RankMatrix::split(&mtx.clone(),&mtx.clone(), &parameters);
-        assert_eq!(out,Some((0,3,5.)));
-    }
-
 
     #[test]
     pub fn rank_matrix_derive_test() {
@@ -519,17 +474,4 @@ mod rank_matrix_tests {
         // panic!();
     }
 
-    #[test]
-    pub fn rank_matrix_split() {
-        let mut parameters = Parameters::empty();
-        parameters.dispersion_mode = DispersionMode::Variance;
-        parameters.standardize = true;
-        parameters.split_fraction_regularization = 1.;
-        let input = RankMatrix::new(vec![(0..150).map(|x| x as f64).collect::<Vec<f64>>()],&parameters);
-        let iris_matrix = RankMatrix::from_array(&iris().t().to_owned(),&parameters);
-        let split = RankMatrix::split_input_output(input, iris_matrix);
-        eprintln!("{:?}",parameters);
-        eprintln!("{:?}",split);
-        // panic!();
-    }
 }

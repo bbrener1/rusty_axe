@@ -1476,10 +1476,6 @@ class Forest:
 
         clusters = set(range(len(self.split_clusters)))
 
-        print("Max tree debug")
-        print(distances)
-        print(mst)
-
         def finite_tree(cluster, available):
             children = []
             try:
@@ -1528,7 +1524,10 @@ class Forest:
         if output is None:
             location = self.location()
             html_location = self.html_directory()
-            rmtree(html_location)
+            try:
+                rmtree(html_location)
+            except FileNotFoundError:
+                pass
             makedirs(html_location)
         else:
             location = self.location()
@@ -1699,9 +1698,8 @@ class Forest:
 
             # Now we need to loop over available clusters to place the cluster decorations into the template
 
-            for cj in cluster_jsons:
-                cluster_id = cj['clusterId']
-                cluster_summary_html = f"<script> summaries['cluster_{cluster_id}'] = {cj};</script>"
+            for i,cj in enumerate(cluster_jsons):
+                cluster_summary_html = f"<script> summaries['cluster_{i}'] = {cj};</script>"
                 html_report.write(cluster_summary_html)
 
         from subprocess import run
