@@ -151,6 +151,7 @@ impl Node {
             let feature_indices: Vec<usize> = self.input_features.iter().map(|f| f.index).collect();
             let sample_indices: Vec<usize> = self.samples.iter().map(|s| s.index).collect();
             let input_array = prototype.input_array.select(Axis(0),&sample_indices).select(Axis(1),&feature_indices);
+
             project(input_array,parameters.reduction).expect("Projection failed")
         })
     }
@@ -406,10 +407,10 @@ mod node_testing {
         parameters.standardize = true;
         parameters.reduce_input = true;
         parameters.reduce_output = true;
-        parameters.reduction = 4;
+        parameters.reduction = 2;
         parameters.norm_mode = NormMode::L1;
-        parameters.dispersion_mode = DispersionMode::MAD;
-        parameters.split_fraction_regularization = 1.;
+        parameters.dispersion_mode = DispersionMode::SSME;
+        parameters.split_fraction_regularization = 0.;
         let mut root = iris_node(&parameters);
         let prototype = iris_prototype();
         let (left,right) = root.local_split(&prototype, &parameters).unwrap();
@@ -421,6 +422,7 @@ mod node_testing {
         eprintln!("{:?}",right_children);
         eprintln!("{:?}",left_children.len());
         eprintln!("{:?}",right_children.len());
+        panic!()
     }
 
 
