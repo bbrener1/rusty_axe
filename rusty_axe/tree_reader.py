@@ -838,7 +838,7 @@ class Forest:
 
         return ordered_features, ordered_coefficients
 
-    def interpret_splits(self, override=False, mode='partial', metric='cosine', pca=100, relatives=True, resolution=1, k=10, depth=6, **kwargs):
+    def interpret_splits(self, override=False, mode='partial', metric='cosine', pca=100, relatives=True, resolution=1, k=100, depth=6, **kwargs):
 
         if pca > len(self.output_features):
             print(
@@ -883,6 +883,8 @@ class Forest:
         self.split_clusters = clusters
         self.factors = self.split_clusters
 
+        self.maximum_spanning_tree(mode='samples')
+
         return labels
 
     def external_split_labels(self, nodes, labels, roots=False):
@@ -891,6 +893,9 @@ class Forest:
 
         cluster_set = set(labels)
         clusters = []
+
+        if not roots:
+            labels = [l+1 for l in labels]
 
         for node, label in zip(nodes, labels):
             node.set_split_cluster(label)
