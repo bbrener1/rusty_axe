@@ -29,9 +29,25 @@ class Prediction:
         self.nfr2 = None
         self.factors = None
 
+
+    def predict_node_sample_encoding(self, matrix, leaves=True, depth=None):
+
+        encodings = [r.predict_matrix_encoding(matrix) for r in self.forest.roots()]
+
+        encoding = np.vstack(encodings)
+        if leaves:
+            encoding = encoding[self.leaf_mask()]
+        if depth is not None:
+            depth_mask = np.zeros(encoding.shape[0], dtype=bool)
+            for n in self.nodes():
+                if n.level <= depth:
+                    depth_mask[n.index] = True
+            encoding = encoding[depth_mask]
+        return encoding
+
     def node_sample_encoding(self):
         if self.nse is None:
-            self.nse = self.forest.predict_node_sample_encoding(
+            self.nse = self.predict_node_sample_encoding(
                 self.matrix, leaves=False)
         return self.nse
 
