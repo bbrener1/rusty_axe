@@ -28,9 +28,11 @@ class NodeCluster:
     def set_name(self, name):
         self.stored_name = name
 
-################################################################################
-# Basic manipulation methods (Nodes/Representations etc)
-################################################################################
+    """
+    ###########################
+    Basic Manipulation Methods
+    ###########################
+    """
 
     def encoding(self):
         return self.forest.node_sample_encoding(self.nodes)
@@ -62,10 +64,11 @@ class NodeCluster:
 
         return [a for n in self.nodes for a in n.ancestors()]
 
-
-################################################################################
-# Consensus tree methods. Kinda weird/hacky. Need to rethink
-################################################################################
+    """
+    ###########################
+    Consensus tree methods
+    ###########################
+    """
 
     def parent_cluster(self):
         try:
@@ -105,10 +108,11 @@ class NodeCluster:
         print(indices)
         return [self.forest.split_clusters[i] for i in indices]
 
-
-##############################################################################
-# Feature change methods (eg changes relative to related nodes)
-##############################################################################
+    """
+    ##############################################################################
+    # Feature change methods (eg changes relative to related nodes)
+    ##############################################################################
+    """
 
     def changed_absolute_root(self):
         roots = self.forest.nodes(root=True, depth=0)
@@ -270,9 +274,11 @@ class NodeCluster:
                         for i in np.argsort(np.abs(model.coef_))]
         return top_features[-n:]
 
-################################################################################
-# Mean/summary methods (describe cluster contents)
-################################################################################
+    """
+    ################################################################################
+    # Mean/summary methods (describe cluster contents)
+    ################################################################################
+    """
 
     def feature_partial(self, feature):
         return np.mean([n.feature_partial(feature) for n in self.nodes])
@@ -290,7 +296,7 @@ class NodeCluster:
     def feature_conditional_gain(self, feature):
         return self.feature_mean_additive(feature)
 
-# Multiplied versions of everything above
+    # Multiplied versions of everything above
 
     def feature_means(self, features=None):
         if features is None:
@@ -395,9 +401,11 @@ class NodeCluster:
 
         return ranked[-n:]
 
-##############################################################################
-# Sample membership methods
-##############################################################################
+    """
+    ##############################################################################
+    # Sample membership methods
+    ##############################################################################
+    """
 
     def sample_scores(self):
         cluster_encoding = self.encoding()
@@ -471,12 +479,16 @@ class NodeCluster:
 
         return np.log(ratio)
 
+    """
+    ##############################################################################
 
-##############################################################################
-# Html methods
-##############################################################################
+    Html methods
 
-# Methods here are used to generate HTML summaries of the cluster
+    Methods here are used to generate HTML summaries of the cluster
+
+    ##############################################################################
+    """
+
 
     def html_directory(self):
         location = self.forest.html_directory() + str(self.id) + "/"
@@ -532,11 +544,6 @@ class NodeCluster:
         attributes['probability_enrichment'] = probability_enrichment
         attributes['localCrossRef'] = local_cross_html
         attributes['globalCrossRef'] = global_cross_html
-        # attributes['children'] = ", ".join(
-        #     [c.name() for c in self.child_clusters()])
-        # attributes['parent'] = self.parent_cluster().name()
-        # attributes['siblings'] = ", ".join(
-        #     [s.name() for s in self.sibling_clusters()])
 
         if features is not None:
 
@@ -550,12 +557,9 @@ class NodeCluster:
         return jsn_dumps(attributes)
 
     def top_local_table(self, n):
-        # changed_vs_sister, fold_vs_sister = self.changed_absolute_sister()
         important_features, important_folds, important_indices = self.important_features(
             n)
-
         selected_local = self.local_correlations(indices=important_indices)
-
         selected_local = np.around(selected_local, decimals=3)
 
         return selected_local, important_features
@@ -657,7 +661,7 @@ class NodeCluster:
 
         return (local_html, global_html)
 
-    def html_cluster_summary(self, n=20, plot=True, output=None):
+    def html_cluster_summary(self, n=20, plot=True, json=None, output=None):
 
         location = self.forest.location()
         if output is None:
@@ -682,7 +686,10 @@ class NodeCluster:
         # self.html_cross_reference(n=n, output=output)
 
         with open(html_location + "cluster_summary_template_js.html", 'w') as html_file:
-            json_string = js_wrap("attributes", self.json_cluster_summary(n=n))
+            if json is None:
+                json_string = js_wrap("attributes", self.json_cluster_summary(n=n))
+            else:
+                json_string = js_wrap("attributes",json)
             html_string = html_string + json_string
             html_file.write(html_string)
 
