@@ -27,7 +27,7 @@ If you wish to alter any aspect of the rust compiler defaults, you can execute
 
 or simply check the current recommendations at https://www.rust-lang.org/tools/install
 
-Install simply by invoking 
+Install by invoking 
 
 `pip install rusty_axe_bbrener1`
 
