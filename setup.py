@@ -46,7 +46,11 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
     setuptools.setup(
         name="rusty-axe-bbrener1",
+<<<<<<< HEAD
         version="0.66",
+=======
+        version="0.63",
+>>>>>>> 2292140902beddab2e9dd328369669291889b31c
         author="Boris Brenerman",
         author_email="bbrener1@jhu.edu",
         description="Random Forest Latent Structure (Biology)",
