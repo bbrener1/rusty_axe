@@ -37,7 +37,6 @@ class PreProcessing(build_py):
         run(["cargo","build","--release"])
         os.replace(compile_path,bin_path)
         os.chmod(bin_path,stat.S_IRWXU)
-        shutil.rmtree(src_path)
         build_py.run(self)
 
 
@@ -70,18 +69,11 @@ with open("README.md", "r", encoding="utf-8") as fh:
         },
         include_package_data=True,
         package_data={
-            'figures':["figures/*.ipynb",],
             'bin':["bin/*",]
         },
         cmdclass={
             'build_py' : PreProcessing,
         },
-        ext_modules=[
-            setuptools.Extension(
-                name='rf_5',
-                sources=[]
-            )
-        ],
         install_requires=[
             'scanpy',
             'leidenalg',
