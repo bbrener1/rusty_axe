@@ -75,7 +75,6 @@ with open("README.md", "r", encoding="utf-8") as fh:
             'build_py' : PreProcessing,
         },
         install_requires=[
-            'scanpy',
             'leidenalg',
             'scikit-learn',
             'matplotlib>=3.4.2'
