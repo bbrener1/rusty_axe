@@ -8,9 +8,6 @@ For a more complete description of available functions please see the tutorial u
 
 This package is currently intended to be run on linux or osx. This package may funciton on windows but no guarantees are made. 
 
-# COMPATIBILITY WARNING
-Statsmodels, which is unfortunately necessary to run several core components of this package, has bad support for OSX Python 3.9. Therefore if you are on OSX, you will either need an existing instal of statsmodels, or python<=3.8 
-
 ### Obtaining Rust
 
 Please note, before instlling this package you should obtain the rust compiler. 
