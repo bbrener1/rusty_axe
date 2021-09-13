@@ -30,3 +30,9 @@ or simply check the current recommendations at https://www.rust-lang.org/tools/i
 Install by invoking 
 
 `pip install rusty_axe_bbrener1`
+
+## Tutorial
+
+A tutorial is available within this repo in the form of an ipython notebook. 
+
+Please consult this tutorial or any of the notebooks used to generate the figures of the accompanying paper. 
