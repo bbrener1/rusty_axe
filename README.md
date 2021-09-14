@@ -8,6 +8,22 @@ For a more complete description of available functions please see the tutorial u
 
 This package is currently intended to be run on linux or osx. This package may funciton on windows but no guarantees are made. 
 
+## Installation
+
+Install by invoking 
+
+`pip install rusty_axe_bbrener1`
+
+## Tutorial
+
+A tutorial is available within this repo in the form of an ipython notebook. 
+
+Please consult this tutorial or any of the notebooks used to generate the figures of the accompanying paper. 
+
+## Building From Source 
+
+In order to build this package from source you will need the rust compiler. It is easily obtained
+
 ### Obtaining Rust
 
 Please note, before instlling this package you should obtain the rust compiler. 
@@ -22,14 +38,3 @@ If you wish to alter any aspect of the rust compiler defaults, you can execute
 
 or simply check the current recommendations at https://www.rust-lang.org/tools/install
 
-## Installation
-
-Install by invoking 
-
-`pip install rusty_axe_bbrener1`
-
-## Tutorial
-
-A tutorial is available within this repo in the form of an ipython notebook. 
-
-Please consult this tutorial or any of the notebooks used to generate the figures of the accompanying paper. 
