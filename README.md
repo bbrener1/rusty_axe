@@ -26,8 +26,6 @@ In order to build this package from source you will need the rust compiler. It i
 
 ### Obtaining Rust
 
-Please note, before instlling this package you should obtain the rust compiler. 
-
 A rust compiler can be obtained and silently installed by executing 
 
 `curl https://sh.rustup.rs -sSf | sh -s -- -y`
