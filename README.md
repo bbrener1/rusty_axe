@@ -8,7 +8,7 @@ For a more complete description of available functions please see the tutorial u
 
 This package is currently intended to be run on linux or osx. This package may funciton on windows but no guarantees are made. 
 
-# Publlication
+## Publlication
 
 A more complete description of this approach to understanding data is pending publication. A bioarxiv preprint will be available shortly. 
 
