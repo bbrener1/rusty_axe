@@ -36,3 +36,13 @@ If you wish to alter any aspect of the rust compiler defaults, you can execute
 
 or simply check the current recommendations at https://www.rust-lang.org/tools/install
 
+### Building the package and inserting it into the python path
+
+After you've obtained the rust compiler I recommend you build using 
+
+`python -m build` 
+in a cloned repo and then install via 
+
+`pip install dist/<tarball>`
+
+
