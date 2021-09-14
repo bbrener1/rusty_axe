@@ -26,7 +26,7 @@ Please consult this tutorial or any of the notebooks used to generate the figure
 
 ## Building From Source 
 
-In order to build this package from source you will need the rust compiler. It is easily obtained
+Optionally, you may wish to build this package from source (although installing via pypi is probably preferred) In order to build this package from source you will need the rust compiler. It is easily obtained
 
 ### Obtaining Rust
 
