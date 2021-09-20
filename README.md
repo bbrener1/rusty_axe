@@ -10,9 +10,7 @@ This package is currently intended to be run on linux or osx. This package may f
 
 ## Publlication
 
-A more complete description of this approach to understanding data is pending publication. A bioarxiv preprint will be available shortly. 
-
-## Installation
+A more complete description of this approach to understanding data is available in the form of a publication: https://www.biorxiv.org/content/10.1101/2021.09.13.460168v1
 
 Install by invoking 
 
