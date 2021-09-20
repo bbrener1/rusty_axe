@@ -6,6 +6,8 @@ This package is intended to interface with one or two numpy matrices of a large 
 
 This package is currently intended to be run on linux or osx. This package may funciton on windows but no guarantees are made. 
 
+This tool is very much a work in progress, please send feedback, positive or negative, to bbrener1@jhu.edu or by opening an issue here! I want to hear how to make this tool more useable and intuitive, and also which parts are helpful.
+
 ## Publlication
 
 A more complete description of this approach to understanding data is available in the form of a publication: https://www.biorxiv.org/content/10.1101/2021.09.13.460168v1
