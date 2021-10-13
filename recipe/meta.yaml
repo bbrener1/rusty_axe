@@ -18,7 +18,5 @@ requirements:
     - python <=3.8
     - matplotlib >=3.4.2
     - scikit-learn
-    - statsmodels
     - python-igraph
     - leidenalg
-    - scanpy
