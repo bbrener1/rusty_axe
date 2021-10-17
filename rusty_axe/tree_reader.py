@@ -378,8 +378,6 @@ class Forest:
     Methods that summarize the factors, usually in matrix form.
     """
 
-
-
     def factor_partial_matrix(self, features=None):
         if features is None:
             coordinates = np.zeros(
@@ -396,7 +394,6 @@ class Forest:
         return coordinates
 
     def factor_feature_matrix(self, features=None):
-
         """
         Average additive gain across all nodes in all factors, in array form.
 
@@ -418,7 +415,6 @@ class Forest:
         return coordinates
 
     def factor_mean_matrix(self, features=None):
-
         """
         Arguments:
         features = Selects a small subset of features to look at instead of all features.
@@ -443,17 +439,16 @@ class Forest:
                     coordinates[i, j] = split_cluster.feature_mean(feature)
         return coordinates
 
+    ########################################################################
+    ########################################################################
 
-########################################################################
-########################################################################
+    # LOADING/CREATION METHODS
 
-# LOADING/CREATION METHODS
+    # This section deals with methods that load and unload the forest
+    # from disk
 
-# This section deals with methods that load and unload the forest
-# from disk
-
-########################################################################
-########################################################################
+    ########################################################################
+    ########################################################################
 
     def backup(self, location):
         print("Saving forest")
@@ -640,11 +635,9 @@ class Forest:
                 for feature in removed_features:
                     self.remove_output_feature(feature)
 
-
     def predict(self, matrix):
         prediction = Prediction(self, matrix)
         return prediction
-
 
     def split_labels(self, depth=3):
 
@@ -895,7 +888,7 @@ class Forest:
         clusters = []
 
         if not roots:
-            labels = [l+1 for l in labels]
+            labels = [l + 1 for l in labels]
 
         for node, label in zip(nodes, labels):
             node.set_split_cluster(label)
@@ -1051,8 +1044,7 @@ class Forest:
                 cluster.id for cluster in self.split_clusters]
 
         cluster_names = [cluster.name() for cluster in self.split_clusters]
-        cluster_coordiantes = combined_coordinates[-1 *
-                                                   len(self.split_clusters):]
+        cluster_coordiantes = combined_coordinates[-1 * len(self.split_clusters):]
 
         f = plt.figure(figsize=(5, 5))
         plt.title("TSNE-Transformed Sample Coordinates")
@@ -1113,7 +1105,6 @@ class Forest:
                 # coordinates[i,j] = sample_cluster.feature_median(feature)
                 coordinates[i, j] = sample_cluster.feature_mean(feature)
         return coordinates
-
 
     def tsne(self, no_plot=False, pca=100, override=False, **kwargs):
         if not hasattr(self, 'tsne_coordinates') or override:
@@ -1197,7 +1188,7 @@ class Forest:
 
     def coordinates(self, override=False, type=None, scaled=True, **kwargs):
 
-        if hasattr(self,'coordinate_cache') and not override:
+        if hasattr(self, 'coordinate_cache') and not override:
             return self.coordinate_cache
 
         if type is None:
@@ -1219,7 +1210,7 @@ class Forest:
 
         return coordinates
 
-    def set_coordiantes(self,coordinates):
+    def set_coordiantes(self, coordinates):
         self.coordinate_type = 'precomputed'
         self.coordinate_cache = coordinates
 
@@ -1261,15 +1252,13 @@ class Forest:
 
         return f
 
+    ########################################################################
+    ########################################################################
 
-########################################################################
-########################################################################
+    # Consensus tree methods
 
-# Consensus tree methods
-
-########################################################################
-########################################################################
-
+    ########################################################################
+    ########################################################################
 
     def split_cluster_transition_matrix(self, depth=3):
 
@@ -1377,14 +1366,17 @@ class Forest:
 
         return odds_ratio
 
-    ###############
-    # Here we have several alternative methods for constructing the consensus tree.
-    ###############
 
-    # Most of them depend on these two helper methods that belong only in this scope
+    ########################################################################
+    # Consensus tree helper methods
+    ########################################################################
 
-    # The finite tree method takes a prototype, which is a list of lists.
-    # Each element in the list corresponds to which elements consider this element their parent
+    """
+    Most of them depend on these two helper methods that belong only in this scope
+
+    The finite tree method takes a prototype, which is a list of lists.
+    Each element in the list corresponds to which elements consider this element their parent
+    """
 
     def finite_tree(cluster, prototype, available):
         print(cluster)
@@ -1411,8 +1403,6 @@ class Forest:
         child_entries[root] = []
         return child_entries
 
-    # End helpers
-
     def most_likely_tree(self, depth=3, transitions=None):
 
         if transitions is None:
@@ -1435,7 +1425,6 @@ class Forest:
         print(f"Transition mtx shape: {transitions.shape}")
 
         tree = []
-        # entry = np.argmax(transitions[-1])
         entry = 0
 
         tree = Forest.finite_tree(
@@ -1451,7 +1440,6 @@ class Forest:
 
         if mode == "transition_matrix":
             distances = self.split_cluster_transition_matrix(depth=depth)
-            # np.diag(distances) = 0
             distances[:, -1] = 0
         elif mode == "odds_ratio":
             distance = 1. / self.split_cluster_odds_ratios()
@@ -1501,11 +1489,9 @@ class Forest:
 
         return tree
 
-
-#########################################################
-# HTML Visualization methods
-#########################################################
-
+    #########################################################
+    # HTML Visualization methods
+    #########################################################
 
     def html_directory(self):
 
@@ -1519,11 +1505,9 @@ class Forest:
 
     def html_tree_summary(self, n=3, mode="ud", custom=None, labels=None, features=None, primary=True, cmap='viridis', secondary=True, figsize=(30, 30), output=None):
 
-
         if n > (self.output.shape[1] / 2):
             print("WARNING, PICKED N THAT IS TOO LARGE, SETTING LOWER")
             n = max(int(self.output.shape[1] / 2), 1)
-
 
         # First we'd like to make sure we are operating from scratch in the html directory:
         if output is None:
@@ -1703,7 +1687,7 @@ class Forest:
 
             # Now we need to loop over available clusters to place the cluster decorations into the template
 
-            for i,cj in enumerate(cluster_jsons):
+            for i, cj in enumerate(cluster_jsons):
                 cluster_summary_html = f"<script> summaries['cluster_{i}'] = {cj};</script>"
                 html_report.write(cluster_summary_html)
 
@@ -1760,7 +1744,6 @@ class Forest:
         correlations = np.corrcoef(self.output.T[indices])
 
         return correlations
-
 
 
 class TruthDictionary:
