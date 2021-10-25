@@ -34,12 +34,11 @@ from scipy.cluster import hierarchy as hrc
 from scipy.spatial.distance import pdist, cdist
 from scipy.cluster.hierarchy import dendrogram, linkage
 
+# CHECK IF THESE ARE USED
+
 import sklearn
 from sklearn.decomposition import PCA
-from sklearn.decomposition import KernelPCA
 from sklearn.manifold import TSNE
-from sklearn.decomposition import NMF
-from sklearn.linear_model import Ridge, Lasso
 
 from umap import UMAP
 import matplotlib.pyplot as plt
@@ -92,7 +91,7 @@ class Forest:
     # A method that allows one to summon a multiprocessing pool general to the forest
 
     def pool(self):
-        if hasattr(self, 'pool'):
+        if hasattr(self, 'pool_object'):
             if self.pool_object is not None:
                 return self.pool_object
 
@@ -176,24 +175,27 @@ class Forest:
         leaf_mask[[leaf.index for leaf in self.leaves()]] = True
         return leaf_mask
 
-########################################################################
-########################################################################
+    """
 
-# NODE/MATRIX METHODS
+    NODE/MATRIX METHODS
 
-# Methods for turning a set of nodes into an encoding matrix
+    Methods for turning a set of nodes into an encoding matrix
 
-# Encoding matrices are boolean matrices, usually node x property
-# Sample encoding matrix would be i,j, where i is ith node and j is whether
-# sample j appears in that node
+    Encoding matrices are matrices, usually node x property
+    Sample encoding matrix would be i,j, where i is ith node and j is whether
+    sample j appears in that node
 
-########################################################################
-########################################################################
+    """
 
-    def node_representation(self, nodes=None, mode='additive_mean', metric=None, pca=0):
+    def node_representation(self, nodes=None, mode='partial', metric=None, pca=0):
         from sklearn.decomposition import IncrementalPCA
 
-        # ROWS ARE NODES, COLUMNS ARE WHATEVER
+        """
+        Generic node representation method, wraps several concrete implementations, switches via the "mode" argument
+        Calls out to other methods for representation, then does optional post-processing (PCA) or conversion to a metric.
+
+        If metric is not none, the representation returns a metric instead of a raw representation. Metrics are called out to scipy.
+        """
 
         if nodes is None:
             nodes = self.nodes()
@@ -216,7 +218,7 @@ class Forest:
             encoding = self.mean_matrix(nodes)
         elif mode == 'factor':
             encoding = self.node_factor_encoding(nodes)
-        elif mode == 'partial':
+        elif mode == 'partial' or mode == "partials":
             encoding = self.partial_matrix(nodes)
         elif mode == 'partial_absolute':
             encoding = self.partial_absolute(nodes)
@@ -227,7 +229,6 @@ class Forest:
             if pca > encoding.shape[1]:
                 print("WARNING, PCA DIMENSION TOO SMALL, PICKING MINIMUM")
                 pca = np.min([pca, encoding.shape[1]])
-            # print(f"debug:{encoding.shape}")
             from sklearn.decomposition import IncrementalPCA
             model = IncrementalPCA(n_components=pca)
             chunks = int(np.floor(encoding.shape[0] / 10000)) + 1
@@ -236,29 +237,21 @@ class Forest:
                 print(f"Learning chunk {i}\r", end='')
                 model.partial_fit(encoding[(i - 1) * 10000:i * 10000])
             model.partial_fit(encoding[-last_chunk:])
-            # transformed = model.transform(encoding)
-            # print(f"Chunks:{chunks}")
             transformed = np.zeros((encoding.shape[0], pca))
             for i in range(1, chunks):
                 print(f"Transforming chunk {i}\r", end='')
-                # print(f"coordinates:{((i-1)*10000,i*10000)}")
                 transformed[(
                     i - 1) * 10000:i * 10000] = model.transform(encoding[(i - 1) * 10000:i * 10000])
-            # print(f"coordinates:{-last_chunk}")
             transformed[-last_chunk:] = model.transform(encoding[-last_chunk:])
             print("")
             encoding = transformed
-            # encoding = PCA(n_components=pca).fit_transform(encoding)
-
-            # encoding = PCA(n_components=pca).fit_transform(encoding)
 
         if metric == "sister":
             if mode != "sister":
                 raise Exception(f"Mode and metric mismatched {mode},{metric}")
             else:
                 representation = sister_distance(encoding)
-
-        if metric is not None:
+        elif metric is not None:
             representation = squareform(pdist(encoding, metric=metric))
         else:
             representation = encoding
@@ -378,16 +371,83 @@ class Forest:
             weighted_predictions[i] = node.weighted_prediction_cache
         return weighted_predictions
 
-########################################################################
-########################################################################
+    """
+    Factor Summary Methods:
 
-# LOADING/CREATION METHODS
+    Methods that summarize the factors, usually in matrix form.
+    """
 
-# This section deals with methods that load and unload the forest
-# from disk
+    def factor_partial_matrix(self, features=None):
+        if features is None:
+            coordinates = np.zeros(
+                (len(self.split_clusters), len(self.output_features)))
+            for i, split_cluster in enumerate(self.split_clusters):
+                coordinates[i] = np.mean(
+                    self.partial_matrix(split_cluster.nodes), axis=1)
+        else:
+            coordinates = np.zeros((len(self.split_clusters), len(features)))
+            for i, split_cluster in enumerate(self.split_clusters):
+                for j, feature in enumerate(features):
+                    coordinates[i, j] = split_cluster.feature_partial(
+                        feature)
+        return coordinates
 
-########################################################################
-########################################################################
+    def factor_feature_matrix(self, features=None):
+        """
+        Average additive gain across all nodes in all factors, in array form.
+
+        Returns: Factor X Feature numpy array, where rows are factors, columns are features
+        """
+
+        if features is None:
+            coordinates = np.zeros(
+                (len(self.split_clusters), len(self.output_features)))
+            for i, split_cluster in enumerate(self.split_clusters):
+                coordinates[i] = np.mean(
+                    self.mean_additive_matrix(split_cluster.nodes), axis=1)
+        else:
+            coordinates = np.zeros((len(self.split_clusters), len(features)))
+            for i, split_cluster in enumerate(self.split_clusters):
+                for j, feature in enumerate(features):
+                    coordinates[i, j] = split_cluster.feature_mean_additive(
+                        feature)
+        return coordinates
+
+    def factor_mean_matrix(self, features=None):
+        """
+        Arguments:
+        features = Selects a small subset of features to look at instead of all features.
+        If None, all features are returned. If a list of indices, then only means of those features are returned, in the order they are passed in.
+
+        Mean across the means of all nodes in a factor.
+        Ok for looking at the identity of samples in the factor.
+
+        Returns: Factor x Feature numpy array. Rows are factors, columns are features.
+        """
+
+        if features is None:
+            coordinates = np.zeros(
+                (len(self.split_clusters), len(self.output_features)))
+            for i, split_cluster in enumerate(self.split_clusters):
+                coordinates[i] = np.mean(
+                    self.mean_matrix(split_cluster.nodes), axis=0)
+        else:
+            coordinates = np.zeros((len(self.split_clusters), len(features)))
+            for i, split_cluster in enumerate(self.split_clusters):
+                for j, feature in enumerate(features):
+                    coordinates[i, j] = split_cluster.feature_mean(feature)
+        return coordinates
+
+    ########################################################################
+    ########################################################################
+
+    # LOADING/CREATION METHODS
+
+    # This section deals with methods that load and unload the forest
+    # from disk
+
+    ########################################################################
+    ########################################################################
 
     def backup(self, location):
         print("Saving forest")
@@ -445,33 +505,6 @@ class Forest:
             print("WARNING, UNREPRESENTED SAMPLES")
 
         return first_forest
-
-    def from_sklearn(forest):
-
-        raw_trees = [e.tree_ for e in forest.estimators_]
-
-        trees = []
-
-        def node_recursion(index, children_left, children_right):
-            nodes = []
-            left_child = children_left[index]
-            right_child = children_right[index]
-            if left_child > 0 and right_child > 0:
-                nodes.extend(node_recursion(
-                    left_child, children_left, children_right))
-                nodes.extend(node_recursion(
-                    right_child, children_left, children_right))
-                nodes.append(left_child)
-                nodes.append(right_child)
-            return nodes
-
-        for raw_tree in raw_trees:
-            children_left = raw_tree.children_left
-            children_right = raw_tree.children_right
-            nodes = node_recursion(0, children_left, children_right)
-            trees.append(nodes)
-
-        return trees
 
     def from_sklearn(forest):
 
@@ -601,72 +634,9 @@ class Forest:
                 for feature in removed_features:
                     self.remove_output_feature(feature)
 
-########################################################################
-########################################################################
-
-# PREDICTION METHODS
-
-# This section deals with methods that allow predictions on
-# samples
-
-########################################################################
-########################################################################
-
     def predict(self, matrix):
         prediction = Prediction(self, matrix)
         return prediction
-
-    def predict_sample_leaves(self, sample):
-        sample_leaves = []
-        for tree in self.trees:
-            sample_leaves.extend(tree.root.predict_sample_leaves(sample))
-        return sample_leaves
-
-    def predict_sample_nodes(self, sample):
-        sample_nodes = []
-        for tree in self.trees:
-            sample_nodes.extend(tree.root.predict_sample_nodes(sample))
-        return sample_nodes
-
-    def predict_vector_leaves(self, vector, features=None):
-        # if features is None:
-        # features = self.input_features
-        sample = {feature: value for feature,
-                  value in zip(range(len(vector)), vector)}
-        return self.predict_sample_leaves(sample)
-
-    def predict_vector_nodes(self, vector, features=None):
-        # if features is None:
-        #     features = self.input_features
-        sample = {feature: value for feature,
-                  value in zip(range(len(vector)), vector)}
-        return self.predict_sample_nodes(sample)
-
-    def predict_node_sample_encoding(self, matrix, leaves=True, depth=None):
-        encodings = []
-        for i, root in enumerate(self.roots()):
-            print(f"Predicting tree:{i}\r", end='')
-            encodings.append(root.predict_matrix_encoding(matrix))
-            encodings.append(np.ones(matrix.shape[0], dtype=bool))
-        print('')
-        encoding = np.vstack(encodings)
-        if leaves:
-            encoding = encoding[self.leaf_mask()]
-        if depth is not None:
-            depth_mask = np.zeros(encoding.shape[0], dtype=bool)
-            for n in self.nodes():
-                if n.level <= depth:
-                    depth_mask[n.index] = True
-            encoding = encoding[depth_mask]
-        return encoding
-
-########################################################################
-########################################################################
-
-# CLUSTERING METHODS
-
-########################################################################
-########################################################################
 
     def split_labels(self, depth=3):
 
@@ -712,10 +682,6 @@ class Forest:
         return self.sample_labels
 
     def cluster_samples_encoding(self, override=False, pca=None, depth=None, resolution=1, **kwargs):
-
-        # Todo: remove this hack
-        if depth is not None:
-            depth_limit = depth
 
         if hasattr(self, 'sample_labels') and override:
             self.reset_sample_clusters()
@@ -779,18 +745,6 @@ class Forest:
         for leaf, label in zip(leaves, self.leaf_labels):
             leaf.leaf_cluster = label
 
-    def cluster_leaves_predictions(self, override=False, mode='mean', *args, **kwargs):
-
-        leaves = self.leaves()
-        predictions = self.node_representation(leaves, mode=mode)
-
-        if hasattr(self, 'leaf_clusters') and not override:
-            print("Clustering has already been done")
-            return self.leaf_labels
-        else:
-            self.set_leaf_labels(sdg.fit_predict(predictions, *args, **kwargs))
-
-        return self.leaf_labels
 
     def node_change_absolute(self, nodes1, nodes2):
         # First we obtain the medians for the nodes in question
@@ -860,7 +814,7 @@ class Forest:
 
         return ordered_features, ordered_coefficients
 
-    def interpret_splits(self, override=False, mode='partial', metric='cosine', pca=100, relatives=True, resolution=1, k=10, depth=6, **kwargs):
+    def interpret_splits(self, override=False, mode='partial', metric='cosine', pca=100, relatives=True, resolution=1, k=100, depth=6, **kwargs):
 
         if pca > len(self.output_features):
             print(
@@ -870,7 +824,6 @@ class Forest:
         nodes = np.array(self.nodes(root=True, depth=depth))
 
         stem_mask = np.array([n.level != 0 for n in nodes])
-        root_mask = np.logical_not(stem_mask)
 
         labels = np.zeros(len(nodes)).astype(dtype=int)
 
@@ -905,6 +858,8 @@ class Forest:
         self.split_clusters = clusters
         self.factors = self.split_clusters
 
+        self.maximum_spanning_tree(mode='samples')
+
         return labels
 
     def external_split_labels(self, nodes, labels, roots=False):
@@ -913,6 +868,9 @@ class Forest:
 
         cluster_set = set(labels)
         clusters = []
+
+        if not roots:
+            labels = [l + 1 for l in labels]
 
         for node, label in zip(nodes, labels):
             node.set_split_cluster(label)
@@ -1068,8 +1026,7 @@ class Forest:
                 cluster.id for cluster in self.split_clusters]
 
         cluster_names = [cluster.name() for cluster in self.split_clusters]
-        cluster_coordiantes = combined_coordinates[-1 *
-                                                   len(self.split_clusters):]
+        cluster_coordiantes = combined_coordinates[-1 * len(self.split_clusters):]
 
         f = plt.figure(figsize=(5, 5))
         plt.title("TSNE-Transformed Sample Coordinates")
@@ -1085,7 +1042,6 @@ class Forest:
     def plot_representation(self, representation, labels=None, metric='cos', pca=False):
 
         if metric is not None:
-            # image = reduction[split_order].T[split_order].T
             agg_f = dendrogram(linkage(
                 representation, metric=metric, method='average'), no_plot=True)['leaves']
             agg_s = dendrogram(linkage(
@@ -1127,52 +1083,7 @@ class Forest:
         coordinates = np.zeros((len(self.sample_clusters), len(features)))
         for i, sample_cluster in enumerate(self.sample_clusters):
             for j, feature in enumerate(features):
-                # coordinates[i,j] = sample_cluster.feature_median(feature)
                 coordinates[i, j] = sample_cluster.feature_mean(feature)
-        return coordinates
-
-    def factor_partial_matrix(self, features=None):
-        if features is None:
-            coordinates = np.zeros(
-                (len(self.split_clusters), len(self.output_features)))
-            for i, split_cluster in enumerate(self.split_clusters):
-                coordinates[i] = np.mean(
-                    self.partial_matrix(split_cluster.nodes), axis=1)
-        else:
-            coordinates = np.zeros((len(self.split_clusters), len(features)))
-            for i, split_cluster in enumerate(self.split_clusters):
-                for j, feature in enumerate(features):
-                    coordinates[i, j] = split_cluster.feature_partial(
-                        feature)
-        return coordinates
-
-    def factor_feature_matrix(self, features=None):
-        if features is None:
-            coordinates = np.zeros(
-                (len(self.split_clusters), len(self.output_features)))
-            for i, split_cluster in enumerate(self.split_clusters):
-                coordinates[i] = np.mean(
-                    self.mean_additive_matrix(split_cluster.nodes), axis=1)
-        else:
-            coordinates = np.zeros((len(self.split_clusters), len(features)))
-            for i, split_cluster in enumerate(self.split_clusters):
-                for j, feature in enumerate(features):
-                    coordinates[i, j] = split_cluster.feature_mean_additive(
-                        feature)
-        return coordinates
-
-    def factor_mean_matrix(self, features=None):
-        if features is None:
-            coordinates = np.zeros(
-                (len(self.split_clusters), len(self.output_features)))
-            for i, split_cluster in enumerate(self.split_clusters):
-                coordinates[i] = np.mean(
-                    self.mean_matrix(split_cluster.nodes), axis=0)
-        else:
-            coordinates = np.zeros((len(self.split_clusters), len(features)))
-            for i, split_cluster in enumerate(self.split_clusters):
-                for j, feature in enumerate(features):
-                    coordinates[i, j] = split_cluster.feature_mean(feature)
         return coordinates
 
     def tsne(self, no_plot=False, pca=100, override=False, **kwargs):
@@ -1252,14 +1163,16 @@ class Forest:
 
         return self.umap_coordinates
 
-    def coordinates(self, type=None, scaled=True, **kwargs):
+    def precomputed_coordinates(self):
+        return self.precomputed_coordinate_cache
+
+    def coordinates(self, override=False, type=None, scaled=True, **kwargs):
+
+        if hasattr(self, 'coordinate_cache') and not override:
+            return self.coordinate_cache
 
         if type is None:
-            if hasattr(self, 'coordinate_type'):
-                type = self.coordinate_type
-            else:
-                type = 'tsne'
-
+            type = 'umap'
         self.coordinate_type = type
 
         type_functions = {
@@ -1276,6 +1189,10 @@ class Forest:
             coordinates = sklearn.preprocessing.scale(coordinates)
 
         return coordinates
+
+    def set_coordiantes(self, coordinates):
+        self.coordinate_type = 'precomputed'
+        self.coordinate_cache = coordinates
 
     def plot_manifold(self, depth=3):
 
@@ -1315,15 +1232,13 @@ class Forest:
 
         return f
 
+    ########################################################################
+    ########################################################################
 
-########################################################################
-########################################################################
+    # Consensus tree methods
 
-# Consensus tree methods
-
-########################################################################
-########################################################################
-
+    ########################################################################
+    ########################################################################
 
     def split_cluster_transition_matrix(self, depth=3):
 
@@ -1403,7 +1318,6 @@ class Forest:
     def split_cluster_odds_ratios(self):
 
         cluster_populations = [len(c.nodes) for c in self.split_clusters]
-        total_nodes = np.sum(cluster_populations)
 
         downstream_frequency = np.ones(
             (len(self.split_clusters), len(self.split_clusters)))
@@ -1431,18 +1345,20 @@ class Forest:
 
         return odds_ratio
 
-    ###############
-    # Here we have several alternative methods for constructing the consensus tree.
-    ###############
+=======
 
-    # Most of them depend on these two helper methods that belong only in this scope
+    ########################################################################
+    # Consensus tree helper methods
+    ########################################################################
 
-    # The finite tree method takes a prototype, which is a list of lists.
-    # Each element in the list corresponds to which elements consider this element their parent
+    """
+    Most of them depend on these two helper methods that belong only in this scope
+
+    The finite tree method takes a prototype, which is a list of lists.
+    Each element in the list corresponds to which elements consider this element their parent
+    """
 
     def finite_tree(cluster, prototype, available):
-        print(cluster)
-        print(prototype)
         children = []
         try:
             available.remove(cluster)
@@ -1464,8 +1380,6 @@ class Forest:
                 child_entries[child] = path
         child_entries[root] = []
         return child_entries
-
-    # End helpers
 
     def most_likely_tree(self, depth=3, transitions=None):
 
@@ -1489,7 +1403,6 @@ class Forest:
         print(f"Transition mtx shape: {transitions.shape}")
 
         tree = []
-        # entry = np.argmax(transitions[-1])
         entry = 0
 
         tree = Forest.finite_tree(
@@ -1505,12 +1418,11 @@ class Forest:
 
         if mode == "transition_matrix":
             distances = self.split_cluster_transition_matrix(depth=depth)
-            # np.diag(distances) = 0
             distances[:, -1] = 0
         elif mode == "odds_ratio":
-            distance = 1. / self.split_cluster_odds_ratios()
+            distances = 1. / self.split_cluster_odds_ratios()
         elif mode == "dependence":
-            distance = self.partial_dependence()
+            distances = self.partial_dependence()
         elif mode == "means":
             mean_matrix = self.split_cluster_mean_matrix()
             domain_matrix = self.split_cluster_domain_mean_matrix()
@@ -1535,10 +1447,6 @@ class Forest:
 
         clusters = set(range(len(self.split_clusters)))
 
-        print("Max tree debug")
-        print(distances)
-        print(mst)
-
         def finite_tree(cluster, available):
             children = []
             try:
@@ -1559,11 +1467,9 @@ class Forest:
 
         return tree
 
-
-#########################################################
-# HTML Visualization methods
-#########################################################
-
+    #########################################################
+    # HTML Visualization methods
+    #########################################################
 
     def html_directory(self):
 
@@ -1577,25 +1483,31 @@ class Forest:
 
     def html_tree_summary(self, n=3, mode="ud", custom=None, labels=None, features=None, primary=True, cmap='viridis', secondary=True, figsize=(30, 30), output=None):
 
-        # First we'd like to make sure we are operating from scratch in the html directory:
-
         if n > (self.output.shape[1] / 2):
             print("WARNING, PICKED N THAT IS TOO LARGE, SETTING LOWER")
             n = max(int(self.output.shape[1] / 2), 1)
 
+        # First we'd like to make sure we are operating from scratch in the html directory:
         if output is None:
             location = self.location()
             html_location = self.html_directory()
-            rmtree(html_location)
+            try:
+                rmtree(html_location)
+            except FileNotFoundError:
+                pass
             makedirs(html_location)
         else:
             location = self.location()
             html_location = output
 
+        cluster_jsons = []
+
         for split_cluster in self.split_clusters:
             print(f"Summarizing:{split_cluster.name()}")
+            cj = split_cluster.json_cluster_summary(n=n)
+            cluster_jsons.append(cj)
             split_cluster.html_cluster_summary(
-                n=n, plot=False, output=html_location + str(split_cluster.id) + "/")
+                n=n, plot=False, output=html_location + str(split_cluster.id) + "/", json=cj)
 
         copyfile(location + "/tree_template.html",
                  html_location + "tree_template.html")
@@ -1683,9 +1595,6 @@ class Forest:
 
             if primary:
 
-                # print(f"Coordinates:{coordinates}")
-                # print(f"Flat tree:{flat_tree}")
-
                 primary_connections = []
 
                 for i, children in flat_tree:
@@ -1753,9 +1662,8 @@ class Forest:
 
             # Now we need to loop over available clusters to place the cluster decorations into the template
 
-            for cluster in self.split_clusters:
-                cluster_summary_json = cluster.json_cluster_summary(n=n)
-                cluster_summary_html = f'<script> summaries["cluster_{cluster.id}"] = {cluster_summary_json};</script>'
+            for i, cj in enumerate(cluster_jsons):
+                cluster_summary_html = f"<script> summaries['cluster_{i}'] = {cj};</script>"
                 html_report.write(cluster_summary_html)
 
         from subprocess import run
@@ -1812,7 +1720,6 @@ class Forest:
 
         return correlations
 
-
 class TruthDictionary:
 
     def __init__(self, counts, header, samples=None):
@@ -1830,10 +1737,4 @@ class TruthDictionary:
             self.sample_dictionary[sample.strip("''").strip('""')] = i
 
     def look(self, sample, feature):
-        #         print(feature)
         return(self.counts[self.sample_dictionary[sample], self.feature_dictionary[feature]])
-
-
-if __name__ != "__main__":
-    import matplotlib as mpl
-    mpl.rcParams['figure.dpi'] = 300

@@ -105,8 +105,6 @@ class Tree:
             plt.plot(connection[0], connection[1])
         plt.show()
 
-        # return coordinates,connectivities
-
     def recursive_plotting_repesentation(self, axes, height=None, height_step=None, representation=None, limits=None):
         if limits is None:
             limits = axes.get_xlim()
@@ -121,7 +119,6 @@ class Tree:
             height_limits = axes.get_ylim()
             height = height_limits[1]
             height_step = -1 * (height_limits[1] - height_limits[0]) / depth
-        # print(representation)
         for i, current_representation in enumerate(representation):
             width_proportion = current_representation[0]
             children = current_representation[1]
@@ -137,7 +134,6 @@ class Tree:
             color = ['r', 'b'][(i % 2)]
 
             axes.plot([center, node_center], [height, node_height], c=color)
-            # axes.plot([node_center],[node_height])
             axes.plot([node_start, node_end], [
                       node_height, node_height], c=color)
 
