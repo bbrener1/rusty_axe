@@ -1,11 +1,9 @@
 from rusty_axe.utils import js_wrap, generate_feature_value_html, generate_cross_reference_table, weighted_correlation
+
 import os
 
 import numpy as np
-
 from matplotlib.colors import TwoSlopeNorm
-
-
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
@@ -488,6 +486,8 @@ class NodeCluster:
 
     ##############################################################################
     """
+
+    # BREAK THIS OUT TO A RENDERER 
 
 
     def html_directory(self):

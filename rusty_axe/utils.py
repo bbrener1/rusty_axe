@@ -5,6 +5,10 @@ from scipy.spatial.distance import pdist, cdist, squareform
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
+import leidenalg as louvain
+import igraph as ig
+from sklearn.neighbors import NearestNeighbors
+
 mpl.rcParams['figure.dpi'] = 100
 
 
@@ -28,9 +32,6 @@ def ssme(mtx, axis=None):
 
 
 def hacked_louvain(knn, resolution=1):
-    import leidenalg as louvain
-    import igraph as ig
-    from sklearn.neighbors import NearestNeighbors
 
     g = ig.Graph()
     g.add_vertices(knn.shape[0])  # this adds adjacency.shape[0] vertices
@@ -38,8 +39,10 @@ def hacked_louvain(knn, resolution=1):
 
     g.add_edges(edges)
 
+
+
     if g.vcount() != knn.shape[0]:
-        logg.warning(
+        logging.warning(
             f'The constructed graph has only {g.vcount()} nodes. '
             'Your adjacency matrix contained redundant nodes.'
         )
@@ -64,22 +67,6 @@ def weighted_correlation(x, weights):
     correlations[np.identity(correlations.shape[0], dtype=bool)] = 1.
 
     return correlations
-
-
-def sample_agglomerative(nodes, samples, n_clusters):
-
-    node_encoding = node_sample_encoding(nodes, samples)
-
-    pre_computed_distance = pdist(node_encoding.T, metric='cosine')
-
-    clustering_model = AgglomerativeClustering(
-        n_clusters=n_clusters, affinity='precomputed')
-
-    clusters = clustering_model.fit_predict(
-        scipy.spatial.distance.squareform(pre_computed_distance))
-
-    return clusters
-
 
 def stack_dictionaries(dictionaries):
     stacked = {}
@@ -251,9 +238,6 @@ def fast_knn(elements, k, neighborhood_fraction=.01, metric='euclidean'):
                     best_neighbors_local = np.argpartition(
                         local_distances[i], k + 1)
 
-                    # print("best neighbors")
-                    # print(best_neighbors_local.shape)
-
                     # Next find the worst neighbor among the knn observed
                     best_worst_local = best_neighbors_local[np.argmax(
                         local_distances[i][best_neighbors_local[:k + 1]])]
@@ -265,11 +249,6 @@ def fast_knn(elements, k, neighborhood_fraction=.01, metric='euclidean'):
                     # By the triangle inequality the closest any element outside the neighborhood
                     # can be to element we are examining is the criterion distance:
                     criterion_distance = anchor_to_worst - anchor_distance
-
-#                     if sample == 0:
-#                         print(f"ld:{local_distances[i][best_neighbors_local[:k]]}")
-#                         print(f"bwd:{best_worst_distance}")
-#                         print(f"cd:{criterion_distance}")
 
                     # Therefore if the criterion distance is greater than the best worst distance, the local knn
                     # is also the best global knn
@@ -310,7 +289,6 @@ def double_fast_knn(elements1, elements2, k, neighborhood_fraction=.01, metric='
     neighborhood_size = max(
         k * 3, int(elements1.shape[0] * neighborhood_fraction))
     anchor_loops = 0
-    # failed_counter = 0
 
     while np.sum(complete) < complete.shape[0]:
 

@@ -10,6 +10,7 @@ from scipy.stats import mannwhitneyu
 from scipy.stats import t, iqr
 from scipy.spatial.distance import cdist, pdist
 
+# ENGLISH AROUND ALL PRINT STATEMENTS
 
 mpl.rcParams['figure.dpi'] = 100
 
