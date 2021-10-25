@@ -3,10 +3,6 @@
 # used by the setuptools install process and alerts it to the location
 # of the library.
 
-mkdir ./rusty_axe/bin
-
-cargo build --release
-
 python -m build
 
 echo $(ls)
