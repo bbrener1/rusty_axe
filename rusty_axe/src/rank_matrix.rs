@@ -1,9 +1,9 @@
 
-use std::sync::Arc;
 extern crate rand;
 use std::f64;
 
-use crate::utils::{arr_from_vec2,ArgMinMax};
+use crate::utils::{arr_from_vec2};
+use crate::argminmax::ArgMinMax;
 use crate::io::NormMode;
 use crate::io::DispersionMode;
 use crate::rank_vector::RankVector;
@@ -184,6 +184,8 @@ impl RankMatrix {
 
     pub fn derive_specified(&self, features:&[usize],samples:&[usize]) -> RankMatrix {
 
+        // Stencil derivation allows to quickly derive vectors with exactly repeating values. See rank vector for full logic.
+
         let sample_stencil = Stencil::from_slice(samples);
 
         let new_meta_vector: Vec<RankVector<Vec<Node>>> = features.iter().map(|i| self.meta_vector[*i].derive_stencil(&sample_stencil)).collect();
@@ -223,24 +225,28 @@ impl RankMatrix {
             else {1.0};
 
             match self.norm_mode {
+                // We don't want to check our norm at each interation so we choose one of two loops here, even though most of the code is redundant.
+
                 NormMode::L1 => {
                     for (i,draw) in draw_order.iter().enumerate() {
-                        worker_vec.pop(*draw);
                         let regularization = (worker_vec.len() as f64 / draw_order.len() as f64).powf(self.split_fraction_regularization);
                         dispersions[i] += worker_vec.dispersion(self.dispersion_mode) * regularization / standardization;
+                        worker_vec.pop(*draw);
                     }
                 }
                 NormMode::L2 => {
                     for (i,draw) in draw_order.iter().enumerate() {
-                        worker_vec.pop(*draw);
                         let regularization = (worker_vec.len() as f64 / draw_order.len() as f64).powf(self.split_fraction_regularization);
                         dispersions[i] += (worker_vec.dispersion(self.dispersion_mode) * regularization / standardization).powi(2);
+                        worker_vec.pop(*draw);
                     }
                 }
             }
         }
 
-        for v in self.meta_vector.iter().rev() {
+        // We operate over the same features but in reverse sample order
+
+        for v in self.meta_vector.iter() {
             worker_vec.clone_from_prototype(v);
 
             let standardization = if self.standardize {
@@ -256,16 +262,17 @@ impl RankMatrix {
             match self.norm_mode {
                 NormMode::L1 => {
                     for (i,draw) in draw_order.iter().enumerate().rev() {
-                        worker_vec.pop(*draw);
                         let regularization = (worker_vec.len() as f64 / draw_order.len() as f64).powf(self.split_fraction_regularization);
+                        // i+1 is important here because the first and last values are those where no sample was drawn or all samples were drawn, thus we need to offset the forward and reverse.
                         dispersions[i+1] += worker_vec.dispersion(self.dispersion_mode) * regularization / standardization;
+                        worker_vec.pop(*draw);
                     }
                 }
                 NormMode::L2 => {
                     for (i,draw) in draw_order.iter().enumerate().rev() {
-                        worker_vec.pop(*draw);
                         let regularization = (worker_vec.len() as f64 / draw_order.len() as f64).powf(self.split_fraction_regularization);
                         dispersions[i+1] += (worker_vec.dispersion(self.dispersion_mode) * regularization / standardization).powi(2);
+                        worker_vec.pop(*draw);
                     }
                 }
             }
@@ -275,44 +282,7 @@ impl RankMatrix {
 
     }
 
-    pub fn split(input:&Array2<f64>,output:&Array2<f64>,parameters:&Parameters) -> Option<(usize,usize,f64)> {
-        let input_matrix = RankMatrix::from_array(input, parameters);
-        let output_matrix = RankMatrix::from_array(output, parameters);
-        RankMatrix::split_input_output(input_matrix, output_matrix)
-    }
 
-    pub fn split_input_output(input_matrix:RankMatrix,output_matrix:RankMatrix) -> Option<(usize,usize,f64)> {
-
-
-        let draw_orders: Vec<Vec<usize>> = input_matrix.meta_vector.iter().map(|mv| mv.draw_order()).collect();
-
-
-        let minima: Vec<Option<(usize,usize,f64)>> =
-            draw_orders
-                // .into_iter()
-                .into_par_iter()
-                .enumerate()
-                .map(|(i,draw_order)| {
-                    let ordered_dispersions = output_matrix.order_dispersions(&draw_order,);
-                    println!("{:?}",ordered_dispersions);
-                    let (local_index,dispersion) = ArgMinMax::argmin_v(ordered_dispersions.iter().skip(1))?;
-                    Some((i,draw_order[local_index],*dispersion))
-                })
-                .collect();
-
-
-
-        println!("Minima:{:?}",minima);
-
-        let (feature,sample,_) =
-            minima.iter()
-            .flat_map(|m| m)
-            .min_by(|&a,&b| (a.2).partial_cmp(&b.2).unwrap())?;
-
-        let threshold = input_matrix.feature_fetch(*feature,*sample);
-
-        Some((*feature,*sample,threshold))
-    }
 
 
     pub fn split_candidates(input_matrix:RankMatrix,output_matrix:RankMatrix) -> Vec<(usize,usize,f64)> {
@@ -355,160 +325,8 @@ impl RankMatrix {
 mod rank_matrix_tests {
 
     use super::*;
-    use smallvec::SmallVec;
-
-    fn iris() -> Array2<f64> {
-        array![ [5.1,3.5,1.4,0.2],
-          [4.9,3.0,1.4,0.2],
-          [4.7,3.2,1.3,0.2],
-          [4.6,3.1,1.5,0.2],
-          [5.0,3.6,1.4,0.2],
-          [5.4,3.9,1.7,0.4],
-          [4.6,3.4,1.4,0.3],
-          [5.0,3.4,1.5,0.2],
-          [4.4,2.9,1.4,0.2],
-          [4.9,3.1,1.5,0.1],
-          [5.4,3.7,1.5,0.2],
-          [4.8,3.4,1.6,0.2],
-          [4.8,3.0,1.4,0.1],
-          [4.3,3.0,1.1,0.1],
-          [5.8,4.0,1.2,0.2],
-          [5.7,4.4,1.5,0.4],
-          [5.4,3.9,1.3,0.4],
-          [5.1,3.5,1.4,0.3],
-          [5.7,3.8,1.7,0.3],
-          [5.1,3.8,1.5,0.3],
-          [5.4,3.4,1.7,0.2],
-          [5.1,3.7,1.5,0.4],
-          [4.6,3.6,1.0,0.2],
-          [5.1,3.3,1.7,0.5],
-          [4.8,3.4,1.9,0.2],
-          [5.0,3.0,1.6,0.2],
-          [5.0,3.4,1.6,0.4],
-          [5.2,3.5,1.5,0.2],
-          [5.2,3.4,1.4,0.2],
-          [4.7,3.2,1.6,0.2],
-          [4.8,3.1,1.6,0.2],
-          [5.4,3.4,1.5,0.4],
-          [5.2,4.1,1.5,0.1],
-          [5.5,4.2,1.4,0.2],
-          [4.9,3.1,1.5,0.1],
-          [5.0,3.2,1.2,0.2],
-          [5.5,3.5,1.3,0.2],
-          [4.9,3.1,1.5,0.1],
-          [4.4,3.0,1.3,0.2],
-          [5.1,3.4,1.5,0.2],
-          [5.0,3.5,1.3,0.3],
-          [4.5,2.3,1.3,0.3],
-          [4.4,3.2,1.3,0.2],
-          [5.0,3.5,1.6,0.6],
-          [5.1,3.8,1.9,0.4],
-          [4.8,3.0,1.4,0.3],
-          [5.1,3.8,1.6,0.2],
-          [4.6,3.2,1.4,0.2],
-          [5.3,3.7,1.5,0.2],
-          [5.0,3.3,1.4,0.2],
-          [7.0,3.2,4.7,1.4],
-          [6.4,3.2,4.5,1.5],
-          [6.9,3.1,4.9,1.5],
-          [5.5,2.3,4.0,1.3],
-          [6.5,2.8,4.6,1.5],
-          [5.7,2.8,4.5,1.3],
-          [6.3,3.3,4.7,1.6],
-          [4.9,2.4,3.3,1.0],
-          [6.6,2.9,4.6,1.3],
-          [5.2,2.7,3.9,1.4],
-          [5.0,2.0,3.5,1.0],
-          [5.9,3.0,4.2,1.5],
-          [6.0,2.2,4.0,1.0],
-          [6.1,2.9,4.7,1.4],
-          [5.6,2.9,3.6,1.3],
-          [6.7,3.1,4.4,1.4],
-          [5.6,3.0,4.5,1.5],
-          [5.8,2.7,4.1,1.0],
-          [6.2,2.2,4.5,1.5],
-          [5.6,2.5,3.9,1.1],
-          [5.9,3.2,4.8,1.8],
-          [6.1,2.8,4.0,1.3],
-          [6.3,2.5,4.9,1.5],
-          [6.1,2.8,4.7,1.2],
-          [6.4,2.9,4.3,1.3],
-          [6.6,3.0,4.4,1.4],
-          [6.8,2.8,4.8,1.4],
-          [6.7,3.0,5.0,1.7],
-          [6.0,2.9,4.5,1.5],
-          [5.7,2.6,3.5,1.0],
-          [5.5,2.4,3.8,1.1],
-          [5.5,2.4,3.7,1.0],
-          [5.8,2.7,3.9,1.2],
-          [6.0,2.7,5.1,1.6],
-          [5.4,3.0,4.5,1.5],
-          [6.0,3.4,4.5,1.6],
-          [6.7,3.1,4.7,1.5],
-          [6.3,2.3,4.4,1.3],
-          [5.6,3.0,4.1,1.3],
-          [5.5,2.5,4.0,1.3],
-          [5.5,2.6,4.4,1.2],
-          [6.1,3.0,4.6,1.4],
-          [5.8,2.6,4.0,1.2],
-          [5.0,2.3,3.3,1.0],
-          [5.6,2.7,4.2,1.3],
-          [5.7,3.0,4.2,1.2],
-          [5.7,2.9,4.2,1.3],
-          [6.2,2.9,4.3,1.3],
-          [5.1,2.5,3.0,1.1],
-          [5.7,2.8,4.1,1.3],
-          [6.3,3.3,6.0,2.5],
-          [5.8,2.7,5.1,1.9],
-          [7.1,3.0,5.9,2.1],
-          [6.3,2.9,5.6,1.8],
-          [6.5,3.0,5.8,2.2],
-          [7.6,3.0,6.6,2.1],
-          [4.9,2.5,4.5,1.7],
-          [7.3,2.9,6.3,1.8],
-          [6.7,2.5,5.8,1.8],
-          [7.2,3.6,6.1,2.5],
-          [6.5,3.2,5.1,2.0],
-          [6.4,2.7,5.3,1.9],
-          [6.8,3.0,5.5,2.1],
-          [5.7,2.5,5.0,2.0],
-          [5.8,2.8,5.1,2.4],
-          [6.4,3.2,5.3,2.3],
-          [6.5,3.0,5.5,1.8],
-          [7.7,3.8,6.7,2.2],
-          [7.7,2.6,6.9,2.3],
-          [6.0,2.2,5.0,1.5],
-          [6.9,3.2,5.7,2.3],
-          [5.6,2.8,4.9,2.0],
-          [7.7,2.8,6.7,2.0],
-          [6.3,2.7,4.9,1.8],
-          [6.7,3.3,5.7,2.1],
-          [7.2,3.2,6.0,1.8],
-          [6.2,2.8,4.8,1.8],
-          [6.1,3.0,4.9,1.8],
-          [6.4,2.8,5.6,2.1],
-          [7.2,3.0,5.8,1.6],
-          [7.4,2.8,6.1,1.9],
-          [7.9,3.8,6.4,2.0],
-          [6.4,2.8,5.6,2.2],
-          [6.3,2.8,5.1,1.5],
-          [6.1,2.6,5.6,1.4],
-          [7.7,3.0,6.1,2.3],
-          [6.3,3.4,5.6,2.4],
-          [6.4,3.1,5.5,1.8],
-          [6.0,3.0,4.8,1.8],
-          [6.9,3.1,5.4,2.1],
-          [6.7,3.1,5.6,2.4],
-          [6.9,3.1,5.1,2.3],
-          [5.8,2.7,5.1,1.9],
-          [6.8,3.2,5.9,2.3],
-          [6.7,3.3,5.7,2.5],
-          [6.7,3.0,5.2,2.3],
-          [6.3,2.5,5.0,1.9],
-          [6.5,3.0,5.2,2.0],
-          [6.2,3.4,5.4,2.3],
-          [5.9,3.0,5.1,1.8] ]
-    }
+    use crate::utils::test_utils::{iris};
+    use crate::utils::slow_mad;
 
     fn blank_parameter() -> Parameters {
         let parameters = Parameters::empty();
@@ -530,7 +348,7 @@ mod rank_matrix_tests {
 
     #[test]
     fn rank_matrix_trivial_test() {
-        let mut parameters = Parameters::empty();
+        let parameters = Parameters::empty();
         let mtx = RankMatrix::new(Vec::new(),&parameters);
         let empty: Vec<f64> = Vec::new();
         assert_eq!(mtx.medians(),empty);
@@ -553,12 +371,14 @@ mod rank_matrix_tests {
         parameters.dispersion_mode = DispersionMode::SSME;
         parameters.norm_mode = NormMode::L1;
         parameters.split_fraction_regularization = 0.;
-        let mut mtx = RankMatrix::new(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]],&parameters);
+        let mtx = RankMatrix::new(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]],&parameters);
         let draw_order = mtx.sort_by_feature(0);
 
         let order_dispersions = mtx.order_dispersions(&draw_order);
-        assert_eq!(order_dispersions,array![594.0, 460.0, 354.0, 252.0, 130.0, 92.0, 162.0, 364.0, 594.0]);
+        assert_eq!(order_dispersions,array![594.,460.0, 354.0, 252.0, 130.0, 92.0, 162.0, 364.0,594.]);
     }
+
+// ,-3.,-2.,-1.,0.,5.,10.,15.,20.
 
     #[test]
     pub fn rank_matrix_test_ordered_mad() {
@@ -566,23 +386,15 @@ mod rank_matrix_tests {
         parameters.dispersion_mode = DispersionMode::MAD;
         parameters.norm_mode = NormMode::L1;
         parameters.split_fraction_regularization = 1.;
-        let mtx = RankMatrix::new(vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]],&parameters);
+        let simple = vec![vec![10.,-3.,0.,5.,-2.,-1.,15.,20.]];
+        let mtx = RankMatrix::new(simple.clone(),&parameters);
         let draw_order = mtx.sort_by_feature(0);
 
         let order_dispersions = mtx.order_dispersions(&draw_order);
-        assert_eq!(order_dispersions,array![594.0, 460.0, 354.0, 252.0, 130.0, 92.0, 162.0, 364.0, 594.0]);
-    }
 
-    #[test]
-    pub fn rank_matrix_test_split() {
-        let mut parameters = blank_parameter();
-        parameters.dispersion_mode = DispersionMode::SSME;
-        parameters.norm_mode = NormMode::L1;
-        parameters.split_fraction_regularization = 0.;
-        let mtx = array![[-3.,10.,0.,5.,-2.,-1.,15.,20.]];
+        let correct = vec![5., 5.25, 5.75, 3.5, 3., 2.5,2.125, 2.625, 5.];
 
-        let out = RankMatrix::split(&mtx.clone(),&mtx.clone(), &parameters);
-        assert_eq!(out,Some((0,1,10.)));
+        assert_eq!(order_dispersions.to_vec(),correct);
     }
 
 
@@ -659,20 +471,7 @@ mod rank_matrix_tests {
             eprintln!("{:?}",i);
             eprintln!("{:?}",f);
         }
-        panic!();
+        // panic!();
     }
 
-    #[test]
-    pub fn rank_matrix_split() {
-        let mut parameters = Parameters::empty();
-        parameters.dispersion_mode = DispersionMode::Variance;
-        parameters.standardize = true;
-        parameters.split_fraction_regularization = 1.;
-        let input = RankMatrix::new(vec![(0..150).map(|x| x as f64).collect::<Vec<f64>>()],&parameters);
-        let iris_matrix = RankMatrix::from_array(&iris().t().to_owned(),&parameters);
-        let split = RankMatrix::split_input_output(input, iris_matrix);
-        eprintln!("{:?}",parameters);
-        eprintln!("{:?}",split);
-        panic!();
-    }
 }

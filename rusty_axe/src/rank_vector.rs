@@ -1,5 +1,6 @@
 use crate::io::DispersionMode;
-use crate::utils::{slow_mad, ArgSortII};
+use crate::utils::{slow_mad};
+use crate::argminmax::*;
 use ndarray::prelude::*;
 use smallvec::SmallVec;
 use std::borrow::{Borrow, BorrowMut};
@@ -607,16 +608,11 @@ impl<
 
     #[inline]
     pub fn var(&self) -> f64 {
-        let len = (self.len() + 1) as f64;
+        let len = self.len() as f64;
         let mean = self.sum() / len;
         (self.sum_of_squares() / len) - mean.powi(2)
 
-        // let values = self.ordered_values();
-        // let len = self.len() as f64;
-        // let sum:f64 = values.iter().sum();
-        // let mean = sum/len;
-        // let deviation_sum:f64 = values.iter().map(|x| (x - mean).powi(2)).sum();
-        // deviation_sum/len
+
     }
 
     #[inline]
@@ -680,18 +676,6 @@ impl<
         let values = self.ordered_values();
         let median = self.median();
         values.iter().map(|x| (x - median).powi(2)).sum()
-    }
-
-    #[inline]
-    fn cov(&self) -> Option<f64> {
-        let median = self.median();
-        let mad = self.mad();
-
-        if self.len() < 2 || self.median() == 0. {
-            None
-        } else {
-            Some(mad / median)
-        }
     }
 
     #[inline]
@@ -948,11 +932,11 @@ impl<
     }
 
     pub fn check_integrity(&self) {
-        if (self.mad() - slow_mad(self.ordered_values())).abs() > 0.00001 {
+        if (self.mad() - slow_mad(&self.ordered_values())).abs() > 0.00001 {
             println!("{:?}", self.nodes);
             println!("{:?}", self.ordered_values());
             println!("{:?}", self.mad());
-            println!("{:?}", slow_mad(self.ordered_values()));
+            println!("{:?}", slow_mad(&self.ordered_values()));
             panic!("Mad mismatch");
         }
     }
@@ -1284,7 +1268,7 @@ pub struct GLVCrawler<
 mod rank_vector_tests {
 
     use super::*;
-    use crate::utils::{slow_mad, slow_median, slow_sme, slow_ssme};
+    use crate::utils::test_utils::{slow_median, slow_sme, slow_ssme};
 
     #[test]
     fn rank_vector_create_empty() {
@@ -1306,7 +1290,7 @@ mod rank_vector_tests {
             vec![-3., -2., -1., 0., 5., 10., 15., 20.]
         );
         assert_eq!(vector.median(), slow_median(vector.ordered_values()));
-        assert_eq!(slow_mad(vector.ordered_values()), vector.mad());
+        assert_eq!(slow_mad(&vector.ordered_values()), vector.mad());
     }
 
     #[test]
@@ -1366,7 +1350,7 @@ mod rank_vector_tests {
                 vm.median(),
                 slow_median(vm.ordered_values())
             );
-            println!("MAD:{},{}", vm.mad(), slow_mad(vm.ordered_values()));
+            println!("MAD:{},{}", vm.mad(), slow_mad(&vm.ordered_values()));
             println!("Boundaries:{:?}", vm.boundaries());
             println!("{:?}", vm.pop(draw));
             println!("{:?}", vm.ordered_values());
@@ -1375,10 +1359,10 @@ mod rank_vector_tests {
                 vm.median(),
                 slow_median(vm.ordered_values())
             );
-            println!("MAD:{},{}", vm.mad(), slow_mad(vm.ordered_values()));
+            println!("MAD:{},{}", vm.mad(), slow_mad(&vm.ordered_values()));
             println!("Boundaries:{:?}", vm.boundaries());
             assert_eq!(vm.median(), slow_median(vm.ordered_values()));
-            assert_eq!(vm.mad(), slow_mad(vm.ordered_values()));
+            assert_eq!(vm.mad(), slow_mad(&vm.ordered_values()));
         }
     }
 
@@ -1395,7 +1379,7 @@ mod rank_vector_tests {
                 vm.median(),
                 slow_median(vm.ordered_values())
             );
-            println!("MAD:{},{}", vm.mad(), slow_mad(vm.ordered_values()));
+            println!("MAD:{},{}", vm.mad(), slow_mad(&vm.ordered_values()));
             println!("Boundaries:{:?}", vm.boundaries());
             println!("{:?}", vm.pop(draw));
             println!("{:?}", vm.ordered_values());
@@ -1404,10 +1388,10 @@ mod rank_vector_tests {
                 vm.median(),
                 slow_median(vm.ordered_values())
             );
-            println!("MAD:{},{}", vm.mad(), slow_mad(vm.ordered_values()));
+            println!("MAD:{},{}", vm.mad(), slow_mad(&vm.ordered_values()));
             println!("Boundaries:{:?}", vm.boundaries());
             assert_eq!(vm.median(), slow_median(vm.ordered_values()));
-            assert_eq!(vm.mad(), slow_mad(vm.ordered_values()));
+            assert_eq!(vm.mad(), slow_mad(&vm.ordered_values()));
         }
     }
 

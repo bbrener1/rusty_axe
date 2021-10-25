@@ -119,6 +119,12 @@ def fit(input_counts, cache=True, output_counts=None, ifh=None, ofh=None, header
     if tmp_dir is not None:
         tmp_dir.cleanup()
 
+    if '-reduce_output' in forest.arguments:
+        ro_i = forest.arguments.index('-reduce_output')
+        reduced = bool(forest.arguments[ro_i+1])
+        if reduced:
+            forest.reset_cache()
+
     return forest
 
 

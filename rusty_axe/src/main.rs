@@ -3,6 +3,8 @@
 // extern crate test;
 // use test::Bencher;
 //
+
+
 #[macro_use]
 extern crate serde_derive;
 
@@ -24,6 +26,7 @@ pub mod node;
 mod random_forest;
 mod fast_nipal_vector;
 mod hash_rv;
+mod argminmax;
 
 use ndarray::prelude::*;
 use std::env;
@@ -130,10 +133,10 @@ impl Filter {
     pub fn filter_matrix(&self, mtx: &Array2<f64>) -> Vec<usize> {
         let scores = self.reduction.score_matrix(mtx);
         if self.orientation {
-            scores.into_iter().enumerate().filter(|(i,s)| *s > self.split).map(|(i,_)| i).collect()
+            scores.into_iter().enumerate().filter(|(_,s)| *s > self.split).map(|(i,_)| i).collect()
         }
         else {
-            scores.into_iter().enumerate().filter(|(i,s)| *s <= self.split).map(|(i,_)| i).collect()
+            scores.into_iter().enumerate().filter(|(_,s)| *s <= self.split).map(|(i,_)| i).collect()
         }
     }
 
