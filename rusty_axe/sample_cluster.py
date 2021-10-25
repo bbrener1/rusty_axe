@@ -1,7 +1,12 @@
 import numpy as np
 
+# TEST THIS
 
 class SampleCluster:
+
+    """
+    Class description here
+    """
 
     def __init__(self, forest, samples, id):
         self.id = id

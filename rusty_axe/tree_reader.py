@@ -34,12 +34,11 @@ from scipy.cluster import hierarchy as hrc
 from scipy.spatial.distance import pdist, cdist
 from scipy.cluster.hierarchy import dendrogram, linkage
 
+# CHECK IF THESE ARE USED
+
 import sklearn
 from sklearn.decomposition import PCA
-from sklearn.decomposition import KernelPCA
 from sklearn.manifold import TSNE
-from sklearn.decomposition import NMF
-from sklearn.linear_model import Ridge, Lasso
 
 from umap import UMAP
 import matplotlib.pyplot as plt
@@ -684,10 +683,6 @@ class Forest:
 
     def cluster_samples_encoding(self, override=False, pca=None, depth=None, resolution=1, **kwargs):
 
-        # Todo: remove this hack
-        if depth is not None:
-            depth_limit = depth
-
         if hasattr(self, 'sample_labels') and override:
             self.reset_sample_clusters()
 
@@ -750,18 +745,6 @@ class Forest:
         for leaf, label in zip(leaves, self.leaf_labels):
             leaf.leaf_cluster = label
 
-    def cluster_leaves_predictions(self, override=False, mode='mean', *args, **kwargs):
-
-        leaves = self.leaves()
-        predictions = self.node_representation(leaves, mode=mode)
-
-        if hasattr(self, 'leaf_clusters') and not override:
-            print("Clustering has already been done")
-            return self.leaf_labels
-        else:
-            self.set_leaf_labels(sdg.fit_predict(predictions, *args, **kwargs))
-
-        return self.leaf_labels
 
     def node_change_absolute(self, nodes1, nodes2):
         # First we obtain the medians for the nodes in question
@@ -841,7 +824,6 @@ class Forest:
         nodes = np.array(self.nodes(root=True, depth=depth))
 
         stem_mask = np.array([n.level != 0 for n in nodes])
-        root_mask = np.logical_not(stem_mask)
 
         labels = np.zeros(len(nodes)).astype(dtype=int)
 
@@ -1060,7 +1042,6 @@ class Forest:
     def plot_representation(self, representation, labels=None, metric='cos', pca=False):
 
         if metric is not None:
-            # image = reduction[split_order].T[split_order].T
             agg_f = dendrogram(linkage(
                 representation, metric=metric, method='average'), no_plot=True)['leaves']
             agg_s = dendrogram(linkage(
@@ -1102,7 +1083,6 @@ class Forest:
         coordinates = np.zeros((len(self.sample_clusters), len(features)))
         for i, sample_cluster in enumerate(self.sample_clusters):
             for j, feature in enumerate(features):
-                # coordinates[i,j] = sample_cluster.feature_median(feature)
                 coordinates[i, j] = sample_cluster.feature_mean(feature)
         return coordinates
 
@@ -1338,7 +1318,6 @@ class Forest:
     def split_cluster_odds_ratios(self):
 
         cluster_populations = [len(c.nodes) for c in self.split_clusters]
-        total_nodes = np.sum(cluster_populations)
 
         downstream_frequency = np.ones(
             (len(self.split_clusters), len(self.split_clusters)))
@@ -1366,6 +1345,7 @@ class Forest:
 
         return odds_ratio
 
+=======
 
     ########################################################################
     # Consensus tree helper methods
@@ -1379,8 +1359,6 @@ class Forest:
     """
 
     def finite_tree(cluster, prototype, available):
-        print(cluster)
-        print(prototype)
         children = []
         try:
             available.remove(cluster)
@@ -1442,9 +1420,9 @@ class Forest:
             distances = self.split_cluster_transition_matrix(depth=depth)
             distances[:, -1] = 0
         elif mode == "odds_ratio":
-            distance = 1. / self.split_cluster_odds_ratios()
+            distances = 1. / self.split_cluster_odds_ratios()
         elif mode == "dependence":
-            distance = self.partial_dependence()
+            distances = self.partial_dependence()
         elif mode == "means":
             mean_matrix = self.split_cluster_mean_matrix()
             domain_matrix = self.split_cluster_domain_mean_matrix()
@@ -1617,9 +1595,6 @@ class Forest:
 
             if primary:
 
-                # print(f"Coordinates:{coordinates}")
-                # print(f"Flat tree:{flat_tree}")
-
                 primary_connections = []
 
                 for i, children in flat_tree:
@@ -1745,7 +1720,6 @@ class Forest:
 
         return correlations
 
-
 class TruthDictionary:
 
     def __init__(self, counts, header, samples=None):
@@ -1763,10 +1737,4 @@ class TruthDictionary:
             self.sample_dictionary[sample.strip("''").strip('""')] = i
 
     def look(self, sample, feature):
-        #         print(feature)
         return(self.counts[self.sample_dictionary[sample], self.feature_dictionary[feature]])
-
-
-if __name__ != "__main__":
-    import matplotlib as mpl
-    mpl.rcParams['figure.dpi'] = 300

@@ -1,5 +1,11 @@
 #!/usr/bin/env python
 
+
+# Fix spaces to be logical units of code ONLY
+# Document CLI/Main
+# Optparse autogenerates help menu
+
+
 import numpy as np
 import glob
 import sys
