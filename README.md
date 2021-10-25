@@ -4,18 +4,29 @@
 
 This package is intended to interface with one or two numpy matrices of a large size (>100 samples, >10 features), and decomposes said matrices into random forest factors (RFFs) that describe different effects at different levels of nesting and non-linear dependency. It generates HTML reports that describe the underlying data, and can also generate other kinds of feedback. This package additionally can train on one dataset and compare that dataset to another. 
 
-For a more complete description of available functions please see the tutorial under ./tutorial
-
 This package is currently intended to be run on linux or osx. This package may funciton on windows but no guarantees are made. 
 
-## Installation
+This tool is very much a work in progress, please send feedback, positive or negative, to bbrener1@jhu.edu or by opening an issue here! I want to hear how to make this tool more useable and intuitive, and also which parts are helpful.
 
-# COMPATIBILITY WARNING
-Statsmodels, which is unfortunately necessary to run several core components of this package, has bad support for OSX Python 3.9. Therefore if you are on OSX, you will either need an existing instal of statsmodels, or python<=3.8 
+## Publlication
 
-I'll complain on their issues page, but so should you, because who does that? =/ 
+A more complete description of this approach to understanding data is available in the form of a publication: https://www.biorxiv.org/content/10.1101/2021.09.13.460168v1
 
-Please note, before instlling this package you should obtain the rust compiler. 
+Install by invoking 
+
+`pip install rusty_axe_bbrener1`
+
+## Tutorial
+
+A tutorial is available within this repo in the form of an ipython notebook. 
+
+Please consult this tutorial or any of the notebooks used to generate the figures of the accompanying paper. 
+
+## Building From Source 
+
+Optionally, you may wish to build this package from source (although installing via pypi is probably preferred) In order to build this package from source you will need the rust compiler. It is easily obtained
+
+### Obtaining Rust
 
 A rust compiler can be obtained and silently installed by executing 
 
@@ -27,14 +38,13 @@ If you wish to alter any aspect of the rust compiler defaults, you can execute
 
 or simply check the current recommendations at https://www.rust-lang.org/tools/install
 
-Install simply by invoking 
+### Building the package and inserting it into the python path
 
-`pip install rusty_axe_bbrener1`
+After you've obtained the rust compiler I recommend you build using 
 
-Alternatively, if you wish to clone this repo, 
+`python -m build` 
+in a cloned repo and then install via 
 
-`python setup.py`
+`pip install dist/<tarball>`
 
-executed while in the repo directory should also do the trick. 
 
-A conda installer is forthcoming

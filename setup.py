@@ -37,7 +37,6 @@ class PreProcessing(build_py):
         run(["cargo","build","--release"])
         os.replace(compile_path,bin_path)
         os.chmod(bin_path,stat.S_IRWXU)
-        shutil.rmtree(src_path)
         build_py.run(self)
 
 
@@ -46,7 +45,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
     setuptools.setup(
         name="rusty-axe-bbrener1",
-        version="0.63",
+        version="0.66",
         author="Boris Brenerman",
         author_email="bbrener1@jhu.edu",
         description="Random Forest Latent Structure (Biology)",
@@ -70,20 +69,13 @@ with open("README.md", "r", encoding="utf-8") as fh:
         },
         include_package_data=True,
         package_data={
-            'figures':["figures/*.ipynb",],
             'bin':["bin/*",]
         },
         cmdclass={
             'build_py' : PreProcessing,
         },
-        ext_modules=[
-            setuptools.Extension(
-                name='rf_5',
-                sources=[]
-            )
-        ],
         install_requires=[
-            'scanpy',
+            'umap-learn',
             'leidenalg',
             'scikit-learn',
             'matplotlib>=3.4.2'
