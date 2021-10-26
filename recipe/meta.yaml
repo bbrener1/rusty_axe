@@ -16,11 +16,6 @@ requirements:
     - python-build
     - wheel
     - setuptools
-    - matplotlib >=3.4.2
-    - scikit-learn
-    - python-igraph
-    - leidenalg
-    - umap-learn
 
 
   run:
