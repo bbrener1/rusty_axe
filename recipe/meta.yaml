@@ -15,12 +15,19 @@ requirements:
     - git
     - python-build
     - setuptools
+    - matplotlib >=3.4.2
+    - scikit-learn
+    - python-igraph
+    - leidenalg
+    - 'umap-learn'
+
 
   run:
     - matplotlib >=3.4.2
     - scikit-learn
     - python-igraph
     - leidenalg
+    - 'umap-learn'
 
   test:
     - run_test.py
