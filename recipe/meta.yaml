@@ -9,9 +9,6 @@ source:
 requirements:
   host:
     - rust
-
-  build:
-    - rust
     - git
     - python-build
     - wheel
