@@ -6,6 +6,7 @@
 echo $(ls)
 echo $(ls ./*)
 echo $(pwd)
+
 python -m build
 
 echo $(ls)

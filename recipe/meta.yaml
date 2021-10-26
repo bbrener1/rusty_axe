@@ -14,12 +14,13 @@ requirements:
     - rust
     - git
     - python-build
+    - wheel
     - setuptools
     - matplotlib >=3.4.2
     - scikit-learn
     - python-igraph
     - leidenalg
-    - 'umap-learn'
+    - umap-learn
 
 
   run:
@@ -27,7 +28,7 @@ requirements:
     - scikit-learn
     - python-igraph
     - leidenalg
-    - 'umap-learn'
+    - umap-learn
 
   test:
     - run_test.py
