@@ -47,4 +47,6 @@ in a cloned repo and then install via
 
 `pip install dist/<tarball>`
 
+## WARNING/TODO 
 
+There is currently (24.1.28) a substantial problem in the bootstrapping code of this repo, do not use in present form. Will push update ASAP
