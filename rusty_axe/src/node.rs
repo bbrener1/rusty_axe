@@ -90,15 +90,50 @@ impl Node {
         }
     }
 
+    // Oh god what was I thinking?
+
+    // fn bootstrap(&self,parameters:&Parameters) -> (Vec<Feature>,Vec<Feature>,Vec<Sample>) {
+
+    //     let input_feature_indices: Vec<usize>;
+    //     let output_feature_indices: Vec<usize>;
+
+    //     if parameters.unsupervised {
+    //         let input_feature_len = self.input_features.len();
+    //         let mut all_indices = (0..input_feature_len).collect::<Vec<usize>>();
+    //         let (ii,oi) = all_indices.partial_shuffle(&mut thread_rng(),input_feature_len/2);
+    //         // Why can't you destructure into an initialized variable? It is a mystery.
+    //         input_feature_indices = ii.to_vec();
+    //         output_feature_indices = oi.to_vec();
+    //     }
+    //     else {
+    //         input_feature_indices = (0..self.input_features.len()).collect();
+    //         output_feature_indices = (0..self.output_features.len()).collect();
+    //     }
+
+    //     let mut rng = thread_rng();
+    //     let input_index_bootstrap: Vec<usize> = (0..parameters.input_feature_subsample).map(|_| rng.gen_range(0..input_feature_indices.len())).collect();
+    //     let output_index_bootstrap: Vec<usize> = (0..parameters.output_feature_subsample).map(|_| rng.gen_range(0..output_feature_indices.len())).collect();
+
+    //     let input_feature_bootstrap: Vec<Feature> = input_index_bootstrap.iter().map(|&i| self.input_features[i].clone()).collect();
+    //     let output_feature_bootstrap: Vec< Feature> = output_index_bootstrap.iter().map(|&i| self.output_features[i].clone()).collect();
+
+    //     let sample_index_bootstrap: Vec<usize> = (0..parameters.sample_subsample).map(|_| rng.gen_range(0..self.samples.len())).collect();
+    //     let sample_bootstrap: Vec<Sample> = sample_index_bootstrap.iter().map(|i| self.samples[*i].clone()).collect();
+
+    //     (input_feature_bootstrap,output_feature_bootstrap,sample_bootstrap)
+    // }
+
+    
     fn bootstrap(&self,parameters:&Parameters) -> (Vec<Feature>,Vec<Feature>,Vec<Sample>) {
 
         let input_feature_indices: Vec<usize>;
         let output_feature_indices: Vec<usize>;
+        let mut rng = thread_rng();
 
         if parameters.unsupervised {
             let input_feature_len = self.input_features.len();
             let mut all_indices = (0..input_feature_len).collect::<Vec<usize>>();
-            let (ii,oi) = all_indices.partial_shuffle(&mut thread_rng(),input_feature_len/2);
+            let (ii,oi) = all_indices.partial_shuffle(&mut rng,input_feature_len/2);
             // Why can't you destructure into an initialized variable? It is a mystery.
             input_feature_indices = ii.to_vec();
             output_feature_indices = oi.to_vec();
@@ -108,9 +143,17 @@ impl Node {
             output_feature_indices = (0..self.output_features.len()).collect();
         }
 
-        let mut rng = thread_rng();
-        let input_index_bootstrap: Vec<usize> = (0..parameters.input_feature_subsample).map(|_| rng.gen_range(0..input_feature_indices.len())).collect();
-        let output_index_bootstrap: Vec<usize> = (0..parameters.output_feature_subsample).map(|_| rng.gen_range(0..output_feature_indices.len())).collect();
+        let input_index_bootstrap: Vec<usize> = 
+            (0..parameters.input_feature_subsample)
+            .map(|_| rng.gen_range(0..input_feature_indices.len()))
+            .map(|i:usize| input_feature_indices[i].clone())
+            .collect();
+
+        let output_index_bootstrap: Vec<usize> = 
+            (0..parameters.output_feature_subsample)
+            .map(|_| rng.gen_range(0..output_feature_indices.len()))
+            .map(|i:usize| output_feature_indices[i].clone())
+            .collect();
 
         let input_feature_bootstrap: Vec<Feature> = input_index_bootstrap.iter().map(|&i| self.input_features[i].clone()).collect();
         let output_feature_bootstrap: Vec< Feature> = output_index_bootstrap.iter().map(|&i| self.output_features[i].clone()).collect();

@@ -320,6 +320,8 @@ class Forest:
     def mean_additive_matrix(self, nodes):
         gains = np.zeros((len(self.output_features), len(nodes)))
         for i, node in enumerate(nodes):
+            if i%100 == 0:
+                print(f"MAE N {i}")
             gains[:, i] = node.additive_mean_gains()
         return gains
 

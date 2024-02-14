@@ -2,7 +2,7 @@ use ndarray::prelude::*;
 use rand::prelude::*;
 use std::f64;
 
-const MAX_ITER: usize = 100;
+const MAX_ITER: usize = 300;
 
 #[derive(Clone, Debug)]
 pub struct Projector {
@@ -13,12 +13,13 @@ pub struct Projector {
     loadings: Array1<f64>,
     weight_norm: f64,
     smallnum: f64,
+    delta_hist: Array1<f64>,
     max_iter: usize,
 }
 
 impl Projector {
     pub fn from(input: Array2<f64>) -> Projector {
-        let smallnum = 10e-4;
+        let smallnum = 10e-2;
         let mut copy = input.clone();
         let means = copy.mean_axis(Axis(0)).unwrap();
         let scale_factors = copy.sum_axis(Axis(1));
@@ -26,6 +27,7 @@ impl Projector {
         let loadings = Array::ones(copy.dim().0);
         let weights = Array::ones(copy.dim().1);
         let weight_norm = f64::MAX;
+        let delta_hist = Array::zeros(MAX_ITER);
         let projector = Projector {
             means,
             scale_factors,
@@ -34,6 +36,7 @@ impl Projector {
             loadings,
             weight_norm,
             smallnum,
+            delta_hist,
             max_iter: MAX_ITER,
         };
         // println!("{:?}",projector);
@@ -49,7 +52,7 @@ impl Projector {
         // self.weights.fill(1.);
         // self.loadings.fill(1.);
         let mut delta = f64::MAX;
-        for _ in 0..self.max_iter {
+        for delta_ind in 0..self.max_iter {
             // println!("d:{:?}",delta);
             // println!("w:{:?}",self.weights);
             self.weights = self.array.t().dot(&self.loadings);
@@ -78,11 +81,21 @@ impl Projector {
                     self.scale_factors.clone(),
                 ));
             } else {
+                self.delta_hist[delta_ind] = delta;
                 self.weight_norm = new_norm
             };
             self.loadings = self.array.dot(&self.weights);
         }
-        None
+        eprintln!("Warning, failed to hit covergence target!");
+        eprintln!("delta drop: {:?}", self.delta_hist);
+        eprintln!("shape: {:?}",self.means.len());
+        eprintln!("max_iter: {:?}",MAX_ITER);
+        return Some((
+            self.loadings.clone(),
+            self.weights.clone(),
+            self.means.clone(),
+            self.scale_factors.clone(),
+        ))
     }
 
     pub fn calculate_n_projections(mut self, n: usize) -> Option<Projection> {
@@ -151,9 +164,9 @@ mod nipals_tests {
     #[test]
     fn iris_projection() {
         let iris = iris();
-        println!("{:?}", iris);
+        // println!("{:?}", iris);
         let projection = Projector::from(iris).calculate_n_projections(4);
-        println!("{:?}", projection);
+        // println!("{:?}", projection);
 
         let answer = array![
             [0.36158968, 0.08226889, 0.85657211, 0.35884393],
@@ -162,15 +175,16 @@ mod nipals_tests {
             [0.31725455, 0.32409435, 0.47971899, 0.75112056]
         ];
 
-        // Can't check the sign of the vectors directly since it's semi-random.
         eprintln!("diff: {:?}", &projection.as_ref().unwrap().weights);
 
-        assert!(
-            (&projection.unwrap().weights.mapv(|x| x.abs()) - answer)
-                .mapv(|x| x.powi(2))
-                .sum()
-                < 0.001
-        );
+        let diff_sum = (&projection.unwrap().weights.mapv(|x| x.abs()) - answer)
+        .mapv(|x| x.powi(2))
+        .sum();
+
+        eprintln!("{:?}",diff_sum);
+
+        assert!(diff_sum < 0.001);
+
     }
 
     #[test]

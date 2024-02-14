@@ -19,10 +19,9 @@ import subprocess as sp
 import rusty_axe.tree_reader as tr
 
 
-bin_path = os.path.join("bin", "rf_5")
+bin_path = os.path.join("..","target","release", "rf_5.exe")
 RUST_PATH = str((Path(__file__).parent /
                  bin_path).resolve())
-
 
 def main(location, input, output=None, ifh=None, ofh=None, **kwargs):
     if output is None:
@@ -98,6 +97,7 @@ def fit(input_counts, cache=True, output_counts=None, ifh=None, ofh=None, header
         unsupervised = False
 
     tmp_dir = None
+    
     if location is None:
 
         print("Input:" + str(input_counts.shape))
@@ -106,7 +106,7 @@ def fit(input_counts, cache=True, output_counts=None, ifh=None, ofh=None, header
         tmp_dir = tmp.TemporaryDirectory()
         location = tmp_dir.name + "/"
 
-    arguments = save_trees(tmp_dir.name + "/", input_counts=input_counts, output_counts=output_counts,
+    arguments = save_trees(location + "/", input_counts=input_counts, output_counts=output_counts,
                            ifh=ifh, ofh=ofh, header=header, lrg_mem=lrg_mem, unsupervised = unsupervised, **kwargs)
 
     forest = tr.Forest.load_from_rust(location, prefix="tmp", ifh="tmp.ifh", ofh="tmp.ofh",
@@ -170,10 +170,10 @@ def inner_fit(location, backtrace=False, unsupervised = False, lrg_mem = False, 
                 break
             output = cp.stdout.readline()
             if output[:6] == "Ingest":
-                print(output.rstrip(), end="\r")
+                print(output)
             elif output[:9] == "Computing":
                 tree_count += 1
-                print(f"Computing tree {tree_count}", end='\r')
+                print(f"Computing tree {tree_count}")
             else:
                 print(output)
 

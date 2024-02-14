@@ -437,6 +437,7 @@ class Node:
         if self.cache:
             if hasattr(self, 'additive_mean_cache'):
                 return self.additive_mean_cache
+
         if self.parent is not None:
             parent_means = self.parent.means()
         else:
@@ -617,26 +618,36 @@ class Node:
         for child in self.children:
             child.trim(limit)
 
+
     def predict_matrix_encoding(self,matrix):
         index_list = self.predict_matrix_indices(matrix)
         encoding = np.zeros((len(index_list),matrix.shape[0]),dtype=bool)
         for i,e in enumerate(index_list):
             encoding[i][e] = True
-        return encoding.T
-
+        return encoding
 
     def predict_matrix_indices(self, matrix, indices=None):
-        encoded_indices = []
         if indices is None:
             indices = np.arange(matrix.shape[0])
+        
+        encoded_indices = []
+        # Because I am an idiot and have to keep the same order as the main node org method, we have to do something dumb now
+        swap_indices = []
         own_mask = self.filter.filter_matrix(matrix)
-        if np.sum(own_mask) > 0:
-            for child in self.children:
-                child_indices = child.predict_matrix_indices(
-                    matrix[own_mask],indices = indices[own_mask])
-                encoded_indices.extend(child_indices)
+        
+        if np.sum(own_mask) <= 0:
+            return [indices[own_mask],]
+
+        for child in self.children:
+            child_indices = child.predict_matrix_indices(
+                matrix[own_mask],indices = indices[own_mask])
+            swap_indices.append(child_indices.pop())
+            encoded_indices.extend(child_indices)
+
+        encoded_indices.extend(swap_indices)
         encoded_indices.append(indices[own_mask])
         return encoded_indices
+
 
     def add_child_cluster(self, cluster, lr):
 

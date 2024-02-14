@@ -33,7 +33,14 @@ class Prediction:
 
     def predict_node_sample_encoding(self, matrix, leaves=True, depth=None):
 
-        encodings = [r.predict_matrix_encoding(matrix) for r in self.forest.roots()]
+        encodings = []
+
+        for i,r in enumerate(self.forest.roots()):
+            print(f"Predicting tree {i}")
+            encodings.append(r.predict_matrix_encoding(matrix))
+
+
+        # encodings = [r.predict_matrix_encoding(matrix) for r in self.forest.roots()]
 
         encoding = np.vstack(encodings)
         if leaves:
