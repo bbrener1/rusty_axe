@@ -12,9 +12,9 @@ This tool is very much a work in progress, please send feedback, positive or neg
 
 A more complete description of this approach to understanding data is available in the form of a publication: https://www.biorxiv.org/content/10.1101/2021.09.13.460168v1
 
-Install by invoking 
-
-`pip install rusty_axe_bbrener1`
+## Warning, Please Install By Cloning, Pip Installation Is Out Of Date
+// Install by invoking 
+// `pip install rusty_axe_bbrener1`
 
 ## Tutorial
 
@@ -47,6 +47,3 @@ in a cloned repo and then install via
 
 `pip install dist/<tarball>`
 
-## WARNING/TODO 
-
-There is currently (24.1.28) a substantial problem in the bootstrapping code of this repo, do not use in present form. Will push update ASAP
